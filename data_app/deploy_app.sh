@@ -44,6 +44,21 @@ for ROLE in \
         --quiet >/dev/null
 done
 
+# Ensure Cloud Build default compute service account has required build & Artifact Registry permissions
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+for CB_ROLE in \
+    "roles/storage.objectAdmin" \
+    "roles/artifactregistry.writer" \
+    "roles/logging.logWriter" \
+    "roles/cloudbuild.builds.builder"; do
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+        --member="serviceAccount:${COMPUTE_SA}" \
+        --role="${CB_ROLE}" \
+        --condition=None \
+        --quiet >/dev/null || true
+done
+
 if ! gcloud artifacts repositories describe "${REPO_NAME}" \
     --location="${REGION}" \
     --project="${PROJECT_ID}" >/dev/null 2>&1; then
