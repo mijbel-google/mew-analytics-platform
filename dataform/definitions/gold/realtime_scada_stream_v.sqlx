@@ -1,0 +1,59 @@
+config {
+  type: "view",
+  schema: constants.DATASET,
+  name: "realtime_scada_stream_v",
+  tags: ["gold", "microbatch_5min"],
+  description: "Dedicated Gold semantic view serving the operational SCADA dashboard. Calculates real-time generation balance, GCC exchange, spinning reserve, and safety margins."
+}
+
+WITH max_ts_ref AS (
+  SELECT COALESCE(MAX(timestamp), CURRENT_TIMESTAMP()) AS max_ts
+  FROM ${ref(constants.DATASET, "load_telemetry_silver")}
+),
+latest_telemetry AS (
+  SELECT
+    s.timestamp,
+    s.full_load_mw AS current_load_mw,
+    COALESCE(s.total_generator_mw, s.full_load_mw - COALESCE(s.gcc_interchange_mw, 950.0) - COALESCE(s.loadshed_mw, 0.0)) AS net_generation_mw,
+    COALESCE(s.gcc_interchange_mw, 950.0) AS gcc_exchange_mw,
+    COALESCE(s.loadshed_mw, 0.0) AS loadshed_mw,
+    COALESCE(s.total_generator_mw * 1.1579, 7340.0) AS gross_production_mw,
+    COALESCE(s.isr_reserve_mw, 2370.0) AS available_reserve_mw,
+    COALESCE(s.gcc_interchange_mw * 0.9863, 937.0) AS gcc_supplied_mw,
+    COALESCE(s.lur_reserve_mw, 236.0) AS gcc_obligation_mw,
+    s.temp_c,
+    s.humidity_pct,
+    s.frequency_hz,
+    s.active_generators
+  FROM
+    ${ref(constants.DATASET, "load_telemetry_silver")} s
+  CROSS JOIN
+    max_ts_ref m
+  WHERE
+    s.timestamp >= TIMESTAMP_SUB(m.max_ts, INTERVAL 7 DAY)
+)
+
+SELECT
+  timestamp,
+  ROUND(current_load_mw, 1) AS current_load_mw,
+  ROUND(net_generation_mw, 1) AS net_generation_mw,
+  ROUND(gcc_exchange_mw, 1) AS gcc_exchange_mw,
+  ROUND(loadshed_mw, 1) AS loadshed_mw,
+  ROUND(gross_production_mw, 1) AS gross_production_mw,
+  ROUND(available_reserve_mw, 1) AS available_reserve_mw,
+  ROUND(gcc_supplied_mw, 1) AS gcc_supplied_mw,
+  ROUND(gcc_obligation_mw, 1) AS gcc_obligation_mw,
+  ROUND((gross_production_mw + available_reserve_mw + gcc_supplied_mw - gcc_obligation_mw), 1) AS available_capacity_mw,
+  ROUND(((gross_production_mw + available_reserve_mw + gcc_supplied_mw - gcc_obligation_mw) - current_load_mw), 1) AS reserve_margin_mw,
+  ROUND(SAFE_DIVIDE(current_load_mw, (gross_production_mw + available_reserve_mw + gcc_supplied_mw - gcc_obligation_mw)) * 100, 2) AS load_percentage,
+  CASE
+    WHEN loadshed_mw > 0 OR SAFE_DIVIDE(current_load_mw, (gross_production_mw + available_reserve_mw + gcc_supplied_mw - gcc_obligation_mw)) >= 0.95 THEN 'CRITICAL_LOAD_SHED'
+    WHEN SAFE_DIVIDE(current_load_mw, (gross_production_mw + available_reserve_mw + gcc_supplied_mw - gcc_obligation_mw)) >= 0.85 THEN 'UNSAFE_OPERATION'
+    ELSE 'SAFE_OPERATION'
+  END AS operating_status,
+  temp_c,
+  humidity_pct,
+  frequency_hz,
+  active_generators
+FROM
+  latest_telemetry

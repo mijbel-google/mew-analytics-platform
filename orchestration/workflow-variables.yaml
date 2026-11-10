@@ -1,0 +1,7 @@
+init_variables:
+  assign:
+    - projectId: "electric-load-demo"
+    - location: "europe-west4"
+    - dataformRepository: "mew-grid-pipeline"
+    - pubsubTopic: "projects/electric-load-demo/topics/grid-stress-alerts"
+    - alertThresholdMw: 12000

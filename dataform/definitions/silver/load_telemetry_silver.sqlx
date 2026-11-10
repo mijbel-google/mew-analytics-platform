@@ -1,0 +1,104 @@
+config {
+  type: "incremental",
+  schema: constants.DATASET,
+  name: "load_telemetry_silver",
+  tags: ["silver", "microbatch_5min"],
+  uniqueKey: ["power_stat_id", "timestamp"],
+  bigquery: {
+    partitionBy: "DATE(timestamp)",
+    clusterBy: ["season", "hour_of_day", "religious_event"]
+  },
+  description: "Deduplicated SCADA telemetry joined with generator-level rollups and official calendar dimensions in the unified dataset.",
+  assertions: {
+    uniqueKey: ["power_stat_id", "timestamp"],
+    nonNull: ["power_stat_id", "timestamp", "full_load_mw"]
+  }
+}
+
+WITH raw_power_stat AS (
+  SELECT
+    CAST(ID AS INT64) AS power_stat_id,
+    TIMESTAMP(CAST(TS AS DATETIME), "${constants.TIMEZONE}") AS timestamp,
+    CAST(LOAD_MW AS FLOAT64) AS full_load_mw,
+    CAST(FREQUENCY AS FLOAT64) AS frequency_hz,
+    CAST(TEMPERATURE AS FLOAT64) AS temp_c,
+    CAST(HUMIDITY AS FLOAT64) AS humidity_pct,
+    COALESCE(CAST(LOADSHED AS FLOAT64), 0.0) AS loadshed_mw,
+    COALESCE(CAST(GCCInterchange AS FLOAT64), 0.0) AS gcc_interchange_mw,
+    COALESCE(CAST(ISR AS FLOAT64), 2370.0) AS isr_reserve_mw,
+    COALESCE(CAST(LUR AS FLOAT64), 236.0) AS lur_reserve_mw,
+    COALESCE(CAST(GenTotal AS FLOAT64), CAST(LOAD_MW AS FLOAT64) * 0.87) AS gen_total_mw,
+    COALESCE(
+      datastream_metadata.source_timestamp,
+      UNIX_MILLIS(TIMESTAMP(CAST(TS AS DATETIME), "${constants.TIMEZONE}"))
+    ) AS source_timestamp_ms,
+    ROW_NUMBER() OVER(
+      PARTITION BY ID, TS 
+      ORDER BY COALESCE(
+        datastream_metadata.source_timestamp,
+        UNIX_MILLIS(TIMESTAMP(CAST(TS AS DATETIME), "${constants.TIMEZONE}"))
+      ) DESC
+    ) AS dedupe_rank
+  FROM
+    ${ref(constants.DATASET, constants.RAW_POWER_STAT_TABLE)}
+  WHERE
+    ID IS NOT NULL
+    AND TS IS NOT NULL
+    AND LOAD_MW IS NOT NULL
+    AND CAST(LOAD_MW AS FLOAT64) >= 0.0
+    AND CAST(LOAD_MW AS FLOAT64) <= ${constants.THRESHOLDS.MAX_LOAD_MW}
+    AND CAST(TEMPERATURE AS FLOAT64) BETWEEN ${constants.THRESHOLDS.MIN_TEMP_C} AND ${constants.THRESHOLDS.MAX_TEMP_C}
+    AND CAST(FREQUENCY AS FLOAT64) BETWEEN ${constants.THRESHOLDS.MIN_FREQ_HZ} AND ${constants.THRESHOLDS.MAX_FREQ_HZ}
+  ${when(incremental(), `AND COALESCE(datastream_metadata.source_timestamp, UNIX_MILLIS(TIMESTAMP(CAST(TS AS DATETIME), "${constants.TIMEZONE}"))) >= (SELECT COALESCE(MAX(source_timestamp_ms) - 86400000, 0) FROM ${self()})`)}
+),
+
+raw_generator_rollup AS (
+  SELECT
+    CAST(PowerStatId AS INT64) AS power_stat_id,
+    COUNTIF(UPPER(TRIM(Status)) = 'RUNNING') AS active_generators,
+    SUM(CASE WHEN UPPER(TRIM(Status)) = 'RUNNING' THEN CAST(PowerMW AS FLOAT64) ELSE 0.0 END) AS total_generator_mw,
+    COALESCE(STDDEV_SAMP(NULLIF(CAST(FrequencyHz AS FLOAT64), 0.0)), 0.0) AS generator_freq_stddev
+  FROM
+    ${ref(constants.DATASET, constants.RAW_GENERATOR_TABLE)}
+  GROUP BY
+    power_stat_id
+)
+
+SELECT
+  p.power_stat_id,
+  p.timestamp,
+  p.full_load_mw,
+  p.frequency_hz,
+  p.temp_c,
+  p.humidity_pct,
+  p.loadshed_mw,
+  p.gcc_interchange_mw,
+  p.isr_reserve_mw,
+  p.lur_reserve_mw,
+  CASE
+    WHEN COALESCE(g.active_generators, 0) > 0 THEN g.active_generators
+    ELSE CAST(GREATEST(12, ROUND(p.full_load_mw / 450.0)) AS INT64)
+  END AS active_generators,
+  CASE
+    WHEN COALESCE(g.total_generator_mw, 0.0) > 0.0 THEN g.total_generator_mw
+    ELSE COALESCE(p.gen_total_mw, p.full_load_mw - p.gcc_interchange_mw - p.loadshed_mw)
+  END AS total_generator_mw,
+  COALESCE(g.generator_freq_stddev, 0.01) AS generator_freq_stddev,
+  EXTRACT(YEAR FROM p.timestamp AT TIME ZONE "${constants.TIMEZONE}") AS year,
+  EXTRACT(HOUR FROM p.timestamp AT TIME ZONE "${constants.TIMEZONE}") AS hour_of_day,
+  cal.day_of_week,
+  cal.is_weekend,
+  cal.season,
+  cal.is_national_day,
+  cal.is_public_holiday,
+  cal.religious_event,
+  p.source_timestamp_ms
+FROM
+  raw_power_stat p
+LEFT JOIN
+  raw_generator_rollup g ON p.power_stat_id = g.power_stat_id
+JOIN
+  ${ref(constants.DATASET, "calendar_reference")} cal
+  ON DATE(p.timestamp, "${constants.TIMEZONE}") = cal.calendar_date
+WHERE
+  p.dedupe_rank = 1

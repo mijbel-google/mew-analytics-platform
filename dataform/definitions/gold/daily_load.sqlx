@@ -1,0 +1,46 @@
+config {
+  type: "incremental",
+  schema: constants.DATASET,
+  name: "daily_load",
+  tags: ["gold", "microbatch_5min"],
+  uniqueKey: ["day_ts"],
+  bigquery: {
+    partitionBy: "DATE(day_ts)",
+    clusterBy: ["season", "religious_event"]
+  },
+  description: "Gold layer daily aggregated actuals, peak demand, and 7-day autoregressive metrics for ARIMA_PLUS forecasting.",
+  assertions: {
+    uniqueKey: ["day_ts"],
+    nonNull: ["day_ts", "peak_load_mw", "avg_load_mw"]
+  }
+}
+
+WITH base_daily AS (
+  SELECT
+    TIMESTAMP_TRUNC(timestamp, DAY) AS day_ts,
+    AVG(full_load_mw) AS avg_load_mw,
+    MAX(full_load_mw) AS peak_load_mw,
+    AVG(temp_c) AS avg_temp_c,
+    MAX(temp_c) AS max_temp_c,
+    AVG(humidity_pct) AS avg_humidity_pct,
+    SUM(loadshed_mw) AS total_loadshed_mw,
+    AVG(active_generators) AS avg_active_generators,
+    ANY_VALUE(is_national_day) AS is_national_day,
+    ANY_VALUE(religious_event) AS religious_event,
+    ANY_VALUE(day_of_week) AS day_of_week,
+    ANY_VALUE(is_weekend) AS is_weekend,
+    ANY_VALUE(season) AS season
+  FROM
+    ${ref(constants.DATASET, "load_telemetry_silver")}
+  ${when(incremental(), `WHERE timestamp >= TIMESTAMP_SUB((SELECT COALESCE(MAX(day_ts), TIMESTAMP('2020-01-01')) FROM ${self()}), INTERVAL 14 DAY)`)}
+  GROUP BY
+    day_ts
+)
+
+SELECT
+  base_daily.*,
+  COALESCE(LAG(avg_load_mw, 1) OVER (ORDER BY day_ts), avg_load_mw) AS load_mw_1d_ago,
+  COALESCE(LAG(avg_load_mw, 7) OVER (ORDER BY day_ts), avg_load_mw) AS load_mw_7d_ago,
+  COALESCE(AVG(avg_load_mw) OVER (ORDER BY day_ts ROWS BETWEEN 7 PRECEDING AND 1 PRECEDING), avg_load_mw) AS avg_load_past_7d
+FROM
+  base_daily

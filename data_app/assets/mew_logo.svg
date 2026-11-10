@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="80" height="80">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4af37" />
+      <stop offset="50%" stop-color="#aa8010" />
+      <stop offset="100%" stop-color="#f3e5ab" />
+    </linearGradient>
+    <linearGradient id="seaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0078d4" />
+      <stop offset="100%" stop-color="#003f72" />
+    </linearGradient>
+  </defs>
+  <!-- Outer Golden Falcon Wings Emblem -->
+  <circle cx="60" cy="60" r="54" fill="#ffffff" stroke="url(#goldGrad)" stroke-width="5"/>
+  <circle cx="60" cy="60" r="46" fill="none" stroke="#005696" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <!-- Upper Sky & Dhow Sail -->
+  <path d="M 22 60 A 38 38 0 0 1 98 60 Z" fill="#e6f4ff"/>
+  <!-- Traditional Kuwaiti Boom Dhow -->
+  <path d="M 38 58 L 82 58 L 74 66 L 46 66 Z" fill="#8b5a2b"/>
+  <path d="M 58 28 L 58 58 L 38 54 Z" fill="#ffffff" stroke="#005696" stroke-width="1.2"/>
+  <path d="M 61 32 L 61 58 L 78 55 Z" fill="#ffffff" stroke="#005696" stroke-width="1.2"/>
+  <!-- Persian Gulf Waves -->
+  <path d="M 24 62 Q 42 57 60 62 T 96 62 L 94 74 Q 60 80 26 74 Z" fill="url(#seaGrad)"/>
+  <path d="M 28 68 Q 45 64 60 68 T 92 68" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+  <!-- Kuwait National Flag Shield at Base -->
+  <g transform="translate(45, 76)">
+    <rect x="0" y="0" width="30" height="8" fill="#007a3d"/>
+    <rect x="0" y="8" width="30" height="8" fill="#ffffff"/>
+    <rect x="0" y="16" width="30" height="8" fill="#ce1126"/>
+    <polygon points="0,0 9,8 9,16 0,24" fill="#000000"/>
+    <rect x="0" y="0" width="30" height="24" fill="none" stroke="url(#goldGrad)" stroke-width="1.5"/>
+  </g>
+</svg>

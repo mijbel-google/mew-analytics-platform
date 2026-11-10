@@ -1,0 +1,63 @@
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+          - projectId: "electric-load-demo"
+          - location: "europe-west4"
+          - repository: "mew-grid-pipeline"
+          - pubsubTopic: "projects/electric-load-demo/topics/grid-stress-alerts"
+
+    # Step 1: Run Dataform compilation & invocation
+    - run_dataform:
+        call: http.post
+        args:
+          url: ${"https://dataform.googleapis.com/v1beta1/projects/" + projectId + "/locations/" + location + "/repositories/" + repository + "/workflowInvocations"}
+          auth:
+            type: OAuth2
+          body:
+            compilationResult: ${"projects/" + projectId + "/locations/" + location + "/repositories/" + repository + "/compilationResults/latest"}
+            invocationConfig:
+              includedTags: ["microbatch_5min"]
+        result: dataformResult
+
+    # Step 2: Execute Real-time Inference & Anomaly Scoring
+    - execute_realtime_inference:
+        call: googleapis.bigquery.v2.jobs.insert
+        args:
+          projectId: ${projectId}
+          body:
+            configuration:
+              query:
+                query: "CALL `electric-load-demo.gold.sp_run_realtime_inference_and_alerts`();"
+                useLegacySql: false
+                location: ${location}
+
+    # Step 3: Check Active Alerts
+    - query_alerts:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+          projectId: ${projectId}
+          body:
+            query: "SELECT alert_severity, alert_message FROM `electric-load-demo.gold.realtime_active_alerts` LIMIT 10;"
+            useLegacySql: false
+            location: ${location}
+        result: alertRecords
+
+    # Step 4: Publish to Decoupled Pub/Sub Topic
+    - evaluate_and_publish:
+        switch:
+          - condition: ${len(alertRecords.rows) > 0}
+            steps:
+              - publish_notification:
+                  call: googleapis.pubsub.v1.projects.topics.publish
+                  args:
+                    topic: ${pubsubTopic}
+                    body:
+                      messages:
+                        - data: ${base64.encode(json.encode(alertRecords.rows))}
+                  next: workflow_finish
+        next: workflow_finish
+
+    - workflow_finish:
+        return: "5-Minute Pipeline executed successfully."

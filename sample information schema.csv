@@ -1,0 +1,156 @@
+table_name,ordinal_position,column_name,data_type,is_nullable
+Actions,1,Id,INT64,YES
+Actions,2,NameEn,STRING,YES
+Actions,3,NameAr,STRING,YES
+Actions,4,Sort,INT64,YES
+Actions,5,IsActive,BOOL,YES
+Actions,6,IsDeleted,BOOL,YES
+Actions,7,InsertUserId,INT64,YES
+Actions,8,InsertDate,DATETIME,YES
+Actions,9,EditUserId,INT64,YES
+Actions,10,EditDate,DATETIME,YES
+Actions,11,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+GENERATOR,1,ID,INT64,YES
+GENERATOR,2,NAME,STRING,YES
+GENERATOR,3,FULLNAME,STRING,YES
+GENERATOR,4,GEN1,FLOAT64,YES
+GENERATOR,5,GEN2,FLOAT64,YES
+GENERATOR,6,GEN3,FLOAT64,YES
+GENERATOR,7,GEN4,FLOAT64,YES
+GENERATOR,8,GEN5,FLOAT64,YES
+GENERATOR,9,GEN6,FLOAT64,YES
+GENERATOR,10,GEN7,FLOAT64,YES
+GENERATOR,11,GEN8,FLOAT64,YES
+GENERATOR,12,TOTAL,FLOAT64,YES
+GENERATOR,13,ORDER_ST,"BIGNUMERIC(38, 2)",YES
+GENERATOR,14,INCLUDEINTOTAL,BOOL,YES
+GENERATOR,15,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+GEN_COMM,1,ID,INT64,YES
+GEN_COMM,2,NAME,STRING,YES
+GEN_COMM,3,GEN,STRING,YES
+GEN_COMM,4,COM,STRING,YES
+GEN_COMM,5,Status,INT64,YES
+GEN_COMM,6,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+LIMITS,1,Id,INT64,YES
+LIMITS,2,INSTALL_CAPACITY,NUMERIC(11),YES
+LIMITS,3,MAX_SF,NUMERIC(11),YES
+LIMITS,4,MAX_PEAK,NUMERIC(11),YES
+LIMITS,5,STAND_BY,NUMERIC(11),YES
+LIMITS,6,ISR,NUMERIC(11),YES
+LIMITS,7,LUR,NUMERIC(11),YES
+LIMITS,8,GCC_Schedule,NUMERIC(11),YES
+LIMITS,9,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+MISC,1,ID,INT64,YES
+MISC,2,NAME,STRING,YES
+MISC,3,VALUE,FLOAT64,YES
+MISC,4,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+POWER_STAT,1,ID,INT64,YES
+POWER_STAT,2,TS,DATETIME,YES
+POWER_STAT,3,LOAD_MW,FLOAT64,YES
+POWER_STAT,4,FREQUENCY,FLOAT64,YES
+POWER_STAT,5,TEMPERATURE,FLOAT64,YES
+POWER_STAT,6,HUMIDITY,FLOAT64,YES
+POWER_STAT,7,LOADSHED,FLOAT64,YES
+POWER_STAT,8,GCCInterchange,FLOAT64,YES
+POWER_STAT,9,MAX_SF,FLOAT64,YES
+POWER_STAT,10,MAX_PEAK,FLOAT64,YES
+POWER_STAT,11,STAND_BY,FLOAT64,YES
+POWER_STAT,12,ISR,FLOAT64,YES
+POWER_STAT,13,LUR,FLOAT64,YES
+POWER_STAT,14,GCCSchedule,FLOAT64,YES
+POWER_STAT,15,GenTotal,FLOAT64,YES
+POWER_STAT,16,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+ReportCategory,1,Id,INT64,YES
+ReportCategory,2,Code,STRING,YES
+ReportCategory,3,NameEn,STRING,YES
+ReportCategory,4,NameAr,STRING,YES
+ReportCategory,5,Sort,INT64,YES
+ReportCategory,6,Notes,STRING,YES
+ReportCategory,7,IsActive,BOOL,YES
+ReportCategory,8,IsDeleted,BOOL,YES
+ReportCategory,9,InsertUserId,INT64,YES
+ReportCategory,10,InsertDate,DATETIME,YES
+ReportCategory,11,EditUserId,INT64,YES
+ReportCategory,12,EditDate,DATETIME,YES
+ReportCategory,13,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+ReportFile,1,Id,INT64,YES
+ReportFile,2,CategoryId,INT64,YES
+ReportFile,3,Year,INT64,YES
+ReportFile,4,Month,INT64,YES
+ReportFile,5,FileDate,DATETIME,YES
+ReportFile,6,FileName,STRING,YES
+ReportFile,7,FilePath,STRING,YES
+ReportFile,8,Notes,STRING,YES
+ReportFile,9,InsertUserId,INT64,YES
+ReportFile,10,InsertDate,DATETIME,YES
+ReportFile,11,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+ScreenAction,1,Id,INT64,YES
+ScreenAction,2,ScreenId,INT64,YES
+ScreenAction,3,ActionId,INT64,YES
+ScreenAction,4,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+Screens,1,Id,INT64,YES
+Screens,2,NameEn,STRING,YES
+Screens,3,NameAr,STRING,YES
+Screens,4,Sort,INT64,YES
+Screens,5,IsActive,BOOL,YES
+Screens,6,IsDeleted,BOOL,YES
+Screens,7,InsertUserId,INT64,YES
+Screens,8,InsertDate,DATETIME,YES
+Screens,9,EditUserId,INT64,YES
+Screens,10,EditDate,DATETIME,YES
+Screens,11,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+TA_S,1,ID,INT64,YES
+TA_S,2,ALIAS_NAME,STRING,YES
+TA_S,3,STATION_B1,STRING,YES
+TA_S,4,B2,STRING,YES
+TA_S,5,B3,STRING,YES
+TA_S,6,GEN,STRING,YES
+TA_S,7,ELEM,STRING,YES
+TA_S,8,SCALE,STRING,YES
+TA_S,9,REMARK,STRING,YES
+TA_S,10,VIEWORDER,FLOAT64,YES
+TA_S,11,ENABLED,BOOL,YES
+TA_S,12,FROMTABLE,STRING,YES
+TA_S,13,COMMENTS,STRING,YES
+TA_S,14,ABSOLUTEVALUE,BOOL,YES
+TA_S,15,INCLUDEINTOTAL,BOOL,YES
+TA_S,16,FULLNAME,STRING,YES
+TA_S,17,EXCLUDEFROMTABLE,BOOL,YES
+TA_S,18,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+UserPermission,1,Id,INT64,YES
+UserPermission,2,UserId,INT64,YES
+UserPermission,3,ScreenId,INT64,YES
+UserPermission,4,ActionId,INT64,YES
+UserPermission,5,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+Users,1,Id,INT64,YES
+Users,2,UserName,STRING,YES
+Users,3,UserPass,STRING,YES
+Users,4,FullName,STRING,YES
+Users,5,Phone,STRING,YES
+Users,6,Mobile,STRING,YES
+Users,7,Email,STRING,YES
+Users,8,EmpNum,INT64,YES
+Users,9,SectorName,STRING,YES
+Users,10,DeptName,STRING,YES
+Users,11,SectionName,STRING,YES
+Users,12,IsAdmin,BOOL,YES
+Users,13,IsActive,BOOL,YES
+Users,14,IsDeleted,BOOL,YES
+Users,15,InsertUserId,INT64,YES
+Users,16,InsertDate,DATETIME,YES
+Users,17,EditUserId,INT64,YES
+Users,18,EditDate,DATETIME,YES
+Users,19,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES
+old_files,1,Title,STRING,YES
+old_files,2,Date,DATETIME,YES
+old_files,3,URL,STRING,YES
+old_files,4,FileName,STRING,YES
+old_files,5,Category,STRING,YES
+old_files,6,CategoryId,INT64,YES
+old_files,7,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64, is_deleted BOOL>",YES
+sysdiagrams,1,name,STRING,YES
+sysdiagrams,2,principal_id,INT64,YES
+sysdiagrams,3,diagram_id,INT64,YES
+sysdiagrams,4,version,INT64,YES
+sysdiagrams,5,definition,BYTES,YES
+sysdiagrams,6,datastream_metadata,"STRUCT<uuid STRING, source_timestamp INT64>",YES

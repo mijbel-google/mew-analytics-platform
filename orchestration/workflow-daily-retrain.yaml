@@ -1,0 +1,18 @@
+main:
+  steps:
+    - init:
+        assign:
+          - projectId: "electric-load-demo"
+          - location: "europe-west4"
+
+    - execute_retraining_and_archive:
+        call: googleapis.bigquery.v2.jobs.insert
+        args:
+          projectId: ${projectId}
+          body:
+            configuration:
+              query:
+                query: "CALL `electric-load-demo.gold.sp_daily_model_retrain_and_archive`();"
+                useLegacySql: false
+                location: ${location}
+        return: "Daily Model Training & Forecast Archival complete."

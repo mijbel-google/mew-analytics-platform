@@ -1,0 +1,81 @@
+-- Idempotent Calendar Reference Dimension Table DDL & Seed
+CREATE OR REPLACE TABLE `electric-load-demo.mew_analytics.calendar_reference`
+CLUSTER BY season, religious_event
+OPTIONS (
+    description = "Official Kuwait civil holidays, Hijri religious observances, and seasonal boundaries (2020-2035)."
+) AS
+WITH date_spine AS (
+    SELECT day AS calendar_date
+    FROM UNNEST(GENERATE_DATE_ARRAY('2020-01-01', '2035-12-31')) AS day
+)
+SELECT
+    calendar_date,
+    EXTRACT(DAYOFWEEK FROM calendar_date) IN (6, 7) AS is_weekend,
+    EXTRACT(DAYOFWEEK FROM calendar_date) AS day_of_week,
+    FORMAT_DATE('%B', calendar_date) AS month_name,
+    CASE 
+        WHEN EXTRACT(MONTH FROM calendar_date) IN (12, 1, 2) THEN 'Winter'
+        WHEN EXTRACT(MONTH FROM calendar_date) IN (3, 4, 5) THEN 'Spring'
+        WHEN EXTRACT(MONTH FROM calendar_date) IN (6, 7, 8) THEN 'Summer'
+        ELSE 'Fall'
+    END AS season,
+    FORMAT_DATE('%m-%d', calendar_date) IN ('02-25', '02-26') AS is_national_day,
+    -- Official Paid Public Holidays (2025, 2026 & 2027)
+    CASE
+        WHEN FORMAT_DATE('%m-%d', calendar_date) = '01-01' THEN TRUE
+        WHEN FORMAT_DATE('%m-%d', calendar_date) IN ('02-25', '02-26') THEN TRUE
+        -- 2025
+        WHEN calendar_date = DATE('2025-01-27') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2025-03-30') AND DATE('2025-04-01') THEN TRUE
+        WHEN calendar_date = DATE('2025-06-05') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2025-06-06') AND DATE('2025-06-08') THEN TRUE
+        WHEN calendar_date = DATE('2025-06-26') THEN TRUE
+        WHEN calendar_date = DATE('2025-09-04') THEN TRUE
+        -- 2026
+        WHEN calendar_date = DATE('2026-01-16') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2026-03-20') AND DATE('2026-03-22') THEN TRUE
+        WHEN calendar_date = DATE('2026-05-26') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2026-05-27') AND DATE('2026-05-29') THEN TRUE
+        WHEN calendar_date = DATE('2026-06-16') THEN TRUE
+        WHEN calendar_date = DATE('2026-08-25') THEN TRUE
+        -- 2027
+        WHEN calendar_date = DATE('2027-01-05') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2027-03-10') AND DATE('2027-03-12') THEN TRUE
+        WHEN calendar_date = DATE('2027-05-16') THEN TRUE
+        WHEN calendar_date BETWEEN DATE('2027-05-17') AND DATE('2027-05-19') THEN TRUE
+        WHEN calendar_date = DATE('2027-06-06') THEN TRUE
+        WHEN calendar_date = DATE('2027-08-15') THEN TRUE
+        ELSE FALSE
+    END AS is_public_holiday,
+    -- Event Classification
+    CASE
+        WHEN FORMAT_DATE('%m-%d', calendar_date) = '01-01' THEN 'New_Year'
+        WHEN FORMAT_DATE('%m-%d', calendar_date) = '02-25' THEN 'National_Day'
+        WHEN FORMAT_DATE('%m-%d', calendar_date) = '02-26' THEN 'Liberation_Day'
+        -- 2025
+        WHEN calendar_date = DATE('2025-01-27') THEN 'Isra_Miraj'
+        WHEN calendar_date BETWEEN DATE('2025-03-01') AND DATE('2025-03-29') THEN 'Ramadan'
+        WHEN calendar_date BETWEEN DATE('2025-03-30') AND DATE('2025-04-01') THEN 'Eid_Fitr'
+        WHEN calendar_date = DATE('2025-06-05') THEN 'Arafat_Day'
+        WHEN calendar_date BETWEEN DATE('2025-06-06') AND DATE('2025-06-08') THEN 'Eid_Adha'
+        WHEN calendar_date = DATE('2025-06-26') THEN 'Islamic_New_Year'
+        WHEN calendar_date = DATE('2025-09-04') THEN 'Mawlid_Nabi'
+        -- 2026
+        WHEN calendar_date = DATE('2026-01-16') THEN 'Isra_Miraj'
+        WHEN calendar_date BETWEEN DATE('2026-02-18') AND DATE('2026-03-19') THEN 'Ramadan'
+        WHEN calendar_date BETWEEN DATE('2026-03-20') AND DATE('2026-03-22') THEN 'Eid_Fitr'
+        WHEN calendar_date = DATE('2026-05-26') THEN 'Arafat_Day'
+        WHEN calendar_date BETWEEN DATE('2026-05-27') AND DATE('2026-05-29') THEN 'Eid_Adha'
+        WHEN calendar_date = DATE('2026-06-16') THEN 'Islamic_New_Year'
+        WHEN calendar_date = DATE('2026-08-25') THEN 'Mawlid_Nabi'
+        -- 2027
+        WHEN calendar_date = DATE('2027-01-05') THEN 'Isra_Miraj'
+        WHEN calendar_date BETWEEN DATE('2027-02-08') AND DATE('2027-03-09') THEN 'Ramadan'
+        WHEN calendar_date BETWEEN DATE('2027-03-10') AND DATE('2027-03-12') THEN 'Eid_Fitr'
+        WHEN calendar_date = DATE('2027-05-16') THEN 'Arafat_Day'
+        WHEN calendar_date BETWEEN DATE('2027-05-17') AND DATE('2027-05-19') THEN 'Eid_Adha'
+        WHEN calendar_date = DATE('2027-06-06') THEN 'Islamic_New_Year'
+        WHEN calendar_date = DATE('2027-08-15') THEN 'Mawlid_Nabi'
+        ELSE 'Normal'
+    END AS religious_event
+FROM date_spine;

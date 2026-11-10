@@ -1,0 +1,31 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# Dataform credentials & local compilation
+.df-credentials.json
+node_modules/
+package-lock.json
+
+# Environment & Secrets
+.env
+*.local.conf
+dev-argolis.conf
+service-account*.json
+*.pem
+*.key
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+/tmp/

@@ -1,0 +1,17 @@
+defaultProject: "electric-load-demo"
+defaultLocation: "europe-west4"
+defaultDataset: "mew_analytics"
+assertionDataset: "mew_analytics"
+dataformCoreVersion: "3.0.0"
+
+vars:
+  targetDataset: "mew_analytics"
+  rawPowerStatTable: "POWER_STAT"
+  rawGeneratorTable: "GENERATOR_READINGS"
+  timezone: "Asia/Kuwait"
+  maxLoadThresholdMw: "25000"
+  minTempThresholdC: "-10.0"
+  maxTempThresholdC: "70.0"
+  minFrequencyHz: "35.0"
+  maxFrequencyHz: "65.0"
+  criticalLoadAlertMw: "12000"

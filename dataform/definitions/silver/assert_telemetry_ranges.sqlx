@@ -1,0 +1,23 @@
+config {
+  type: "assertion",
+  schema: constants.DATASET,
+  name: "assert_telemetry_ranges",
+  tags: ["silver", "microbatch_5min"],
+  description: "Validates calibrated operational limits: temp (-10 to 70 C), load (<= 25000 MW), frequency (35 to 65 Hz)."
+}
+
+SELECT
+  power_stat_id,
+  timestamp,
+  full_load_mw,
+  temp_c,
+  frequency_hz
+FROM
+  ${ref(constants.DATASET, "load_telemetry_silver")}
+WHERE
+  full_load_mw < 0.0 
+  OR full_load_mw > ${constants.THRESHOLDS.MAX_LOAD_MW}
+  OR temp_c < ${constants.THRESHOLDS.MIN_TEMP_C} 
+  OR temp_c > ${constants.THRESHOLDS.MAX_TEMP_C}
+  OR frequency_hz < ${constants.THRESHOLDS.MIN_FREQ_HZ} 
+  OR frequency_hz > ${constants.THRESHOLDS.MAX_FREQ_HZ}

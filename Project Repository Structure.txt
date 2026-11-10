@@ -1,0 +1,50 @@
+mew-analytics-platform/
+├── README.md
+├── .gitignore
+├── deploy_mew_solution.sh
+├── mew-env.sample.conf
+├── dataform/
+│   ├── workflow_settings.yaml
+│   ├── materialize_medallion_tables.sql
+│   ├── includes/
+│   │   └── constants.js
+│   └── definitions/
+│       ├── sources/
+│       │   └── raw_sources.js
+│       ├── dimensions/
+│       │   ├── calendar_reference.sqlx
+│       │   └── calendar_reference.sql
+│       ├── silver/
+│       │   ├── load_telemetry_silver.sqlx
+│       │   └── assert_telemetry_ranges.sqlx
+│       └── gold/
+│           ├── realtime_scada_stream_v.sqlx
+│           ├── hourly_load.sqlx
+│           ├── daily_load.sqlx
+│           └── bqml_models_and_procedures.sql
+├── orchestration/
+│   ├── dags/
+│   │   ├── mew_5min_telemetry_inference_dag.py
+│   │   └── mew_daily_retrain_forecast_dag.py
+│   ├── deploy_composer_env.sh
+│   ├── sync_dags.sh
+│   ├── deploy_schedulers.sh
+│   ├── workflow-variables.yaml
+│   ├── workflow-5min-microbatch.yaml
+│   └── workflow-daily-retrain.yaml
+├── data_app/
+│   ├── app.py
+│   ├── bigquery_data_agent.py
+│   ├── assets/
+│   │   └── mew_logo.svg
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── deploy_app.sh
+├── data_agent/
+│   ├── system_instructions.txt
+│   └── golden_queries_catalog.sql
+├── scripts/
+│   └── seed_and_push_github.sh
+└── dev_tools/
+    ├── generate_argolis_synthetic_data.sql
+    └── seed_argolis_bronze.sh
