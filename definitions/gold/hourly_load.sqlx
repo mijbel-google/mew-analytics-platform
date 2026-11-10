@@ -1,0 +1,48 @@
+config {
+  type: "incremental",
+  schema: constants.DATASET,
+  name: "hourly_load",
+  tags: ["gold", "microbatch_5min"],
+  uniqueKey: ["hour_ts"],
+  bigquery: {
+    partitionBy: "DATE(hour_ts)",
+    clusterBy: ["season", "is_weekend", "religious_event"]
+  },
+  description: "Gold layer hourly aggregated load, temperature metrics, and sliding window features for BQML regression.",
+  assertions: {
+    uniqueKey: ["hour_ts"],
+    nonNull: ["hour_ts", "avg_load_mw", "max_load_mw"]
+  }
+}
+
+WITH base_hourly AS (
+  SELECT
+    TIMESTAMP_TRUNC(timestamp, HOUR) AS hour_ts,
+    AVG(full_load_mw) AS avg_load_mw,
+    MAX(full_load_mw) AS max_load_mw,
+    AVG(temp_c) AS avg_temp_c,
+    MAX(temp_c) AS max_temp_c,
+    AVG(humidity_pct) AS avg_humidity_pct,
+    MAX(loadshed_mw) AS max_loadshed_mw,
+    AVG(active_generators) AS avg_active_generators,
+    AVG(total_generator_mw) AS avg_generation_mw,
+    AVG(isr_reserve_mw) AS avg_spinning_reserve_mw,
+    ANY_VALUE(is_national_day) AS is_national_day,
+    ANY_VALUE(religious_event) AS religious_event,
+    ANY_VALUE(hour_of_day) AS hour_of_day,
+    ANY_VALUE(day_of_week) AS day_of_week,
+    ANY_VALUE(is_weekend) AS is_weekend,
+    ANY_VALUE(season) AS season
+  FROM
+    ${ref(constants.DATASET, "load_telemetry_silver")}
+  ${when(incremental(), `WHERE timestamp >= TIMESTAMP_SUB((SELECT COALESCE(MAX(hour_ts), TIMESTAMP('2020-01-01')) FROM ${self()}), INTERVAL 72 HOUR)`)}
+  GROUP BY
+    hour_ts
+)
+
+SELECT
+  base_hourly.*,
+  COALESCE(LAG(avg_load_mw, 24) OVER (ORDER BY hour_ts), avg_load_mw) AS load_mw_24h_ago,
+  COALESCE(AVG(avg_load_mw) OVER (ORDER BY hour_ts ROWS BETWEEN 24 PRECEDING AND 1 PRECEDING), avg_load_mw) AS avg_load_past_24h
+FROM
+  base_hourly
