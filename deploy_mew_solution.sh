@@ -178,9 +178,81 @@ if [[ "${DRY_RUN}" == "true" ]]; then
 fi
 
 # =============================================================================
-# 4. DATASET & CUSTOMER RAW SOURCE TABLE VERIFICATION
+# 4. API ENABLEMENT, IAM PERMISSIONS & DATASET VERIFICATION
 # =============================================================================
-echo "==> [Step 1/5] Ensuring Unified BigQuery Dataset '${GCP_PROJECT_ID}:${DATASET_NAME}' exists..."
+echo "==> [Step 1/5] Enabling required Google Cloud APIs & IAM permissions in '${GCP_PROJECT_ID}'..."
+gcloud services enable \
+    bigquery.googleapis.com \
+    bigqueryconnection.googleapis.com \
+    bigquerystorage.googleapis.com \
+    dataform.googleapis.com \
+    pubsub.googleapis.com \
+    run.googleapis.com \
+    cloudbuild.googleapis.com \
+    artifactregistry.googleapis.com \
+    aiplatform.googleapis.com \
+    geminidataanalytics.googleapis.com \
+    iap.googleapis.com \
+    iam.googleapis.com \
+    --project="${GCP_PROJECT_ID}" \
+    --quiet
+
+if [[ "${DEPLOY_COMPOSER}" == "true" && "${PROVISION_NEW_COMPOSER_ENV}" == "true" ]]; then
+    gcloud services enable composer.googleapis.com --project="${GCP_PROJECT_ID}" --quiet
+fi
+
+SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+echo "==> Ensuring Pipeline & Data App Service Account (${SERVICE_ACCOUNT}) and IAM roles..."
+if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" --project="${GCP_PROJECT_ID}" --quiet >/dev/null 2>&1; then
+    gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
+        --display-name="MEW Energy Analytics Pipeline & App Service Account" \
+        --project="${GCP_PROJECT_ID}" \
+        --quiet
+fi
+
+for SA_ROLE in \
+    "roles/bigquery.dataEditor" \
+    "roles/bigquery.jobUser" \
+    "roles/bigquery.readSessionUser" \
+    "roles/dataform.editor" \
+    "roles/pubsub.publisher" \
+    "roles/aiplatform.user" \
+    "roles/composer.worker"; do
+    gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
+        --member="serviceAccount:${SERVICE_ACCOUNT}" \
+        --role="${SA_ROLE}" \
+        --condition=None \
+        --quiet >/dev/null || true
+done
+
+PROJECT_NUMBER="$(gcloud projects describe "${GCP_PROJECT_ID}" --format='value(projectNumber)')"
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+echo "==> Ensuring Cloud Build / Compute Service Account (${COMPUTE_SA}) build permissions..."
+for CB_ROLE in \
+    "roles/storage.objectAdmin" \
+    "roles/artifactregistry.writer" \
+    "roles/logging.logWriter" \
+    "roles/cloudbuild.builds.builder"; do
+    gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
+        --member="serviceAccount:${COMPUTE_SA}" \
+        --role="${CB_ROLE}" \
+        --condition=None \
+        --quiet >/dev/null || true
+done
+
+ACTIVE_USER="$(gcloud config get-value account 2>/dev/null || true)"
+if [[ -n "${ACTIVE_USER}" ]]; then
+    echo "==> Granting Cloud Run Invoker & IAP Accessor roles to active operator (${ACTIVE_USER})..."
+    for USER_ROLE in "roles/run.invoker" "roles/iap.httpsResourceAccessor"; do
+        gcloud projects add-iam-policy-binding "${GCP_PROJECT_ID}" \
+            --member="user:${ACTIVE_USER}" \
+            --role="${USER_ROLE}" \
+            --condition=None \
+            --quiet >/dev/null || true
+    done
+fi
+
+echo "==> Ensuring Unified BigQuery Dataset '${GCP_PROJECT_ID}:${DATASET_NAME}' exists..."
 if ! bq show --project_id="${GCP_PROJECT_ID}" "${GCP_PROJECT_ID}:${DATASET_NAME}" >/dev/null 2>&1; then
     bq --location="${GCP_LOCATION}" mk --dataset \
         --label datacloud:antigravity \

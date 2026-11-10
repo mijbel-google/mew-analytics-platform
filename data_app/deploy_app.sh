@@ -17,25 +17,32 @@ REPO_NAME="${REPO_NAME:-mew-data-apps}"
 SERVICE_ACCOUNT_NAME="${SERVICE_ACCOUNT_NAME:-mew-pipeline-sa}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "==> [1/4] Configuring GCP Project (${PROJECT_ID}) & enabling Cloud Run / Build APIs..."
+echo "==> [1/4] Configuring GCP Project (${PROJECT_ID}) & enabling Cloud Run / Build / IAP APIs..."
 gcloud services enable \
     run.googleapis.com \
     cloudbuild.googleapis.com \
     artifactregistry.googleapis.com \
     bigquery.googleapis.com \
+    bigquerystorage.googleapis.com \
     aiplatform.googleapis.com \
-    --project="${PROJECT_ID}"
+    geminidataanalytics.googleapis.com \
+    iap.googleapis.com \
+    --project="${PROJECT_ID}" \
+    --quiet
 
 echo "==> [2/4] Ensuring Service Account (${SERVICE_ACCOUNT}) & Artifact Registry (${REPO_NAME})..."
-if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
+if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" --project="${PROJECT_ID}" --quiet >/dev/null 2>&1; then
     gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
         --display-name="MEW Energy Analytics Pipeline Service Account" \
-        --project="${PROJECT_ID}"
+        --project="${PROJECT_ID}" \
+        --quiet
 fi
 
 for ROLE in \
     "roles/bigquery.dataViewer" \
+    "roles/bigquery.dataEditor" \
     "roles/bigquery.jobUser" \
+    "roles/bigquery.readSessionUser" \
     "roles/aiplatform.user"; do
     gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
         --member="serviceAccount:${SERVICE_ACCOUNT}" \
@@ -98,7 +105,7 @@ gcloud run deploy "${SERVICE_NAME}" \
     --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID}" \
     --allow-unauthenticated \
     --quiet || \
-gcloud run deploy "${SERVICE_NAME}" \
+gcloud beta run deploy "${SERVICE_NAME}" \
     --image="${IMAGE_URI}" \
     --region="${REGION}" \
     --project="${PROJECT_ID}" \
@@ -110,7 +117,31 @@ gcloud run deploy "${SERVICE_NAME}" \
     --max-instances=10 \
     --concurrency=80 \
     --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID}" \
+    --iap \
     --quiet
+
+ACTIVE_USER="$(gcloud config get-value account 2>/dev/null || true)"
+if [[ -n "${ACTIVE_USER}" ]]; then
+    echo "==> Configuring Cloud Run Invoker & Identity-Aware Proxy (IAP) access for ${ACTIVE_USER}..."
+    gcloud run services add-iam-policy-binding "${SERVICE_NAME}" \
+        --region="${REGION}" \
+        --project="${PROJECT_ID}" \
+        --member="user:${ACTIVE_USER}" \
+        --role="roles/run.invoker" \
+        --quiet >/dev/null 2>&1 || true
+
+    gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+        --member="user:${ACTIVE_USER}" \
+        --role="roles/iap.httpsResourceAccessor" \
+        --condition=None \
+        --quiet >/dev/null 2>&1 || true
+fi
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" \
+    --role="roles/run.invoker" \
+    --condition=None \
+    --quiet >/dev/null 2>&1 || true
 
 echo "==> Deployment Complete!"
 gcloud run services describe "${SERVICE_NAME}" \

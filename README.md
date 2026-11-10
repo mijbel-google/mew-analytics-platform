@@ -17,7 +17,7 @@ The **MEW Energy Intelligence Platform** is an end-to-end Google Cloud Data Anal
   - Connects directly to the customer's existing replicated raw/bronze tables (e.g., `POWER_STAT` and `GENERATOR_READINGS`) in a single unified BigQuery dataset.
   - Materializes curated Silver (`load_telemetry_silver`) and Gold (`realtime_scada_stream_v`, `hourly_load`, `daily_load`) tables and views with strict operational range assertions and complete idempotency.
 - **Machine Learning & Peak Forecasting (`BigQuery ML`)**:
-  - **`ARIMA_PLUS` (`daily_peak_forecast_model`)**: 30-day daily peak demand forecasting with Kuwait holiday effects (`holiday_region = 'KW'`) and 85% confidence intervals (`forecast_30d`, `forecast_explain_30d`).
+  - **`ARIMA_PLUS` (`daily_peak_forecast_model`)**: 30-day daily peak demand forecasting with regional holiday effects (`holiday_region = 'EMEA'`) and 85% confidence intervals (`forecast_30d`, `forecast_explain_30d`).
   - **`BOOSTED_TREE_REGRESSOR` (`load_regression_model`)**: Non-linear thermal sensitivity model for 5-minute anomaly detection (`realtime_predictions_5min`, `realtime_active_alerts`) and interactive What-If heat-wave simulation.
 - **Managed Workflow Orchestration (`GCP Managed Airflow / Cloud Composer`)**:
   - **`mew_5min_telemetry_inference_dag`**: Runs every 5 minutes to trigger incremental Dataform transformations, execute real-time BQML anomaly detection, and publish grid stress alerts to Cloud Pub/Sub.
@@ -83,7 +83,73 @@ mew-analytics-platform/
 
 ---
 
-## 3. Customer Deployment Guide (MEW Engineers)
+## 3. Required GCP APIs & IAM Permissions
+
+All required Google Cloud APIs and service account IAM bindings below are **automatically enabled and configured** by `deploy_mew_solution.sh` and `data_app/deploy_app.sh`.
+
+### A. Required Google Cloud APIs
+- `bigquery.googleapis.com` — BigQuery core storage & SQL engine
+- `bigqueryconnection.googleapis.com` — BigQuery Cloud Resource Connections (for Vertex AI / Gemini)
+- `bigquerystorage.googleapis.com` — High-throughput DataFrame reads for Streamlit
+- `dataform.googleapis.com` — Dataform SQLX compilation & ELT workflow execution
+- `composer.googleapis.com` — GCP Managed Airflow (Cloud Composer)
+- `pubsub.googleapis.com` — Real-time grid stress alerting topic (`grid-stress-alerts`)
+- `run.googleapis.com` — Cloud Run serverless container hosting
+- `cloudbuild.googleapis.com` — Cloud Build container image packaging
+- `artifactregistry.googleapis.com` — Docker image repository (`mew-data-apps`)
+- `aiplatform.googleapis.com` — Vertex AI / Gemini foundation models
+- `geminidataanalytics.googleapis.com` — Conversational BigQuery Data Agent API
+- `iap.googleapis.com` — Identity-Aware Proxy for zero-trust browser authentication
+- `iam.googleapis.com` — Service account and IAM policy management
+
+### B. Deployer / Operator IAM Roles (User or CI Identity Running `deploy_mew_solution.sh`)
+To provision infrastructure, enable APIs, and bind service account roles, the human operator or CI runner executing `deploy_mew_solution.sh` requires **`roles/owner`** or **`roles/editor`** + **`roles/resourcemanager.projectIamAdmin`**, or the following granular roles:
+| IAM Role | Purpose |
+| :--- | :--- |
+| `roles/serviceusage.serviceUsageAdmin` | Enable required GCP APIs on the project |
+| `roles/resourcemanager.projectIamAdmin` | Bind IAM roles to pipeline, Cloud Build, and IAP service accounts |
+| `roles/iam.serviceAccountAdmin` | Create `mew-pipeline-sa` service account |
+| `roles/iam.serviceAccountUser` | Attach `mew-pipeline-sa` to Cloud Run and Cloud Composer |
+| `roles/bigquery.admin` | Create/manage the unified dataset, tables, views, BQML models, and stored procedures |
+| `roles/dataform.admin` | Configure Dataform repositories and workflow invocations |
+| `roles/composer.admin` | Provision/update Cloud Composer environments and upload Airflow DAGs |
+| `roles/pubsub.admin` | Create and manage the `grid-stress-alerts` Pub/Sub topic |
+| `roles/artifactregistry.admin` | Create the `mew-data-apps` Docker repository |
+| `roles/cloudbuild.builds.editor` | Submit container builds via `gcloud builds submit` |
+| `roles/run.admin` | Deploy and configure the `mew-scada-intelligence-hub` Cloud Run service |
+| `roles/iap.admin` | Enable Identity-Aware Proxy (IAP) on Cloud Run and grant user access |
+
+### C. Pipeline & Data App Service Account (`mew-pipeline-sa@<PROJECT_ID>.iam.gserviceaccount.com`)
+Automatically created and granted by `deploy_mew_solution.sh`:
+| IAM Role | Purpose |
+| :--- | :--- |
+| `roles/bigquery.dataEditor` | Read/write Silver & Gold tables, forecast archives, and alert tables |
+| `roles/bigquery.jobUser` | Execute BigQuery SQL queries, stored procedures, and `ML.PREDICT` jobs |
+| `roles/bigquery.readSessionUser` | Accelerated BigQuery Storage API reads in the Streamlit Data App |
+| `roles/dataform.editor` | Compile and invoke Dataform SQLX pipelines from Managed Airflow |
+| `roles/pubsub.publisher` | Publish critical grid stress alerts to Cloud Pub/Sub |
+| `roles/aiplatform.user` | Invoke Gemini models and the BigQuery Data Agent (`geminidataanalytics`) |
+| `roles/composer.worker` | Execute Managed Airflow worker tasks in Cloud Composer |
+
+### D. Cloud Build / Default Compute Service Account (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`)
+Automatically bound by `deploy_mew_solution.sh` and `data_app/deploy_app.sh`:
+| IAM Role | Purpose |
+| :--- | :--- |
+| `roles/storage.objectAdmin` | Read/stage source archives in the `gs://<PROJECT_ID>_cloudbuild` bucket |
+| `roles/artifactregistry.writer` | Push built Docker container images to Artifact Registry |
+| `roles/logging.logWriter` | Stream container build logs to Cloud Logging |
+| `roles/cloudbuild.builds.builder` | Execute Cloud Build steps |
+
+### E. End-User Access Roles (Viewing the Cloud Run Data App)
+Automatically granted to the active `gcloud` user during deployment:
+| IAM Role | Principal | Purpose |
+| :--- | :--- | :--- |
+| `roles/run.invoker` | End User / Domain & IAP Service Agent (`service-<PROJECT_NUMBER>@gcp-sa-iap.iam.gserviceaccount.com`) | Invoke the `mew-scada-intelligence-hub` Cloud Run service |
+| `roles/iap.httpsResourceAccessor` | End User / Domain (e.g., `user:engineer@mew.gov.kw`) | Authenticate through Google Identity-Aware Proxy (IAP) in the browser |
+
+---
+
+## 4. Customer Deployment Guide (MEW Engineers)
 
 ### Prerequisites
 1. **Google Cloud SDK (`gcloud`)** and **BigQuery CLI (`bq`)** installed and authenticated:
@@ -107,10 +173,11 @@ chmod +x deploy_mew_solution.sh
 The script will:
 1. Display the **Non-Production Disclaimer** and ask for confirmation.
 2. Prompt for your `GCP_PROJECT_ID`, `GCP_LOCATION`, unified `DATASET_NAME`, and the exact names of your raw tables (`RAW_POWER_STAT_TABLE`, `RAW_GENERATOR_TABLE`).
-3. Verify your raw tables exist in BigQuery.
-4. Idempotently create the Silver and Gold tables, views, BQML models (`ARIMA_PLUS` and `BOOSTED_TREE_REGRESSOR`), and stored procedures in the same dataset.
-5. Synchronize the Airflow DAGs to your Cloud Composer environment.
-6. Build and deploy the Streamlit SCADA Control Room Data App to Cloud Run.
+3. Enable all required GCP APIs and configure IAM roles for the service accounts and active operator.
+4. Verify your raw tables exist in BigQuery.
+5. Idempotently create the Silver and Gold tables, views, BQML models (`ARIMA_PLUS` and `BOOSTED_TREE_REGRESSOR`), and stored procedures in the same dataset.
+6. Synchronize the Airflow DAGs to your Cloud Composer environment.
+7. Build and deploy the Streamlit SCADA Control Room Data App to Cloud Run with Identity-Aware Proxy (IAP).
 
 ### Option B: Non-Interactive / Config-Driven Deployment
 1. Copy and edit `mew-env.sample.conf`:
@@ -124,7 +191,42 @@ The script will:
 
 ---
 
-## 4. National Grid Balance Equations Implemented in Gold & Data App
+## 5. Securely Accessing the SCADA Control Room Data App
+
+In enterprise Google Cloud organizations (including Argolis), the **Domain Restricted Sharing** policy (`constraints/iam.allowedPolicyMemberDomains`) prevents public unauthenticated (`allUsers`) access to Cloud Run services. Calling the `.run.app` URL without authentication returns `403: Forbidden`.
+
+You can securely access the deployed application using either of the two methods below:
+
+### Method 1: Direct Browser Sign-In via Identity-Aware Proxy (IAP)
+The deployment script enables **Cloud Run Native IAP (`--iap`)** and grants `roles/iap.httpsResourceAccessor` and `roles/run.invoker` to the deployer account:
+1. Open the Cloud Run URL directly in your browser:
+   `https://mew-scada-intelligence-hub-928308690350.europe-west4.run.app`
+2. Sign in with your authorized Google Cloud / Workspace account (e.g., `admin@mijbel.altostrat.com`).
+3. To authorize additional MEW engineers for browser access:
+   ```bash
+   gcloud projects add-iam-policy-binding <GCP_PROJECT_ID> \
+       --member="user:engineer@domain.com" \
+       --role="roles/iap.httpsResourceAccessor"
+   gcloud run services add-iam-policy-binding mew-scada-intelligence-hub \
+       --region=<GCP_LOCATION> \
+       --project=<GCP_PROJECT_ID> \
+       --member="user:engineer@domain.com" \
+       --role="roles/run.invoker"
+   ```
+
+### Method 2: Local Authenticated Tunnel via `gcloud run services proxy`
+If you prefer to connect from your workstation without browser IAP cookies, use the built-in `gcloud` authenticated proxy, which automatically attaches your OIDC Bearer token to every request:
+```bash
+gcloud run services proxy mew-scada-intelligence-hub \
+    --project=electric-load-demo \
+    --region=europe-west4 \
+    --port=8080
+```
+Then open **`http://localhost:8080`** in your browser.
+
+---
+
+## 6. National Grid Balance Equations Implemented in Gold & Data App
 
 ### 1. Current Load Balance (`الأحمال الحالية`)
 $$\text{الأحمال الحالية (Current Load)} = \text{إجمالي الإنتاج الحالي (Net Generation)} + \text{تبادل الطاقة الحالي مع الربط الخليجي (GCC Exchange)} + \text{الأحمال المفصوله (Load Shed)}$$
