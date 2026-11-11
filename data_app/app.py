@@ -29,154 +29,203 @@ def _get_logo_base64() -> str:
 
 LOGO_B64 = _get_logo_base64()
 
+# Modernized Design System:
+# - System Font Stack (SF Pro, Segoe UI, Roboto, Booking.com approach)
+# - Single Neutral Palette (Slate/Zinc) + High-Contrast Accent (#0284c7)
+# - Color-Blind Fallbacks: Patterns (solid, dashed, striped), line weights, and symbols ([✔], [▲], [✖])
 st.markdown(
     """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* System Font Stack - Booking.com & native OS pattern */
+    html, body, [class*="css"], .stApp {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1, "cv04" 1;
+        -webkit-font-smoothing: antialiased;
+        color: #0f172a;
         direction: rtl;
         text-align: right;
     }
+
+    /* Executive Top Bar */
     .scada-header-bar {
-        background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+        background-color: #ffffff;
         border: 1px solid #cbd5e1;
-        border-radius: 10px;
-        padding: 14px 22px;
+        border-top: 4px solid #0284c7; /* High-contrast action accent */
+        border-radius: 8px;
+        padding: 16px 24px;
         margin-bottom: 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         direction: ltr;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
     }
     .scada-header-left {
         text-align: left;
         direction: ltr;
-        color: #1e293b;
+        color: #0f172a;
     }
     .scada-header-left h2 {
         margin: 0;
-        font-size: 1.75rem;
+        font-size: 1.6rem;
         font-weight: 800;
-        color: #1e293b;
+        color: #0f172a;
+        letter-spacing: -0.02em;
     }
     .scada-header-left .sub {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: #334155;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #475569;
+        margin-top: 2px;
     }
     .scada-header-left .ts {
-        font-size: 0.98rem;
+        font-size: 0.88rem;
         font-weight: 700;
-        color: #0f172a;
-        font-family: monospace;
+        color: #0284c7;
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        margin-top: 2px;
     }
     .scada-header-right {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
         text-align: right;
         direction: ltr;
     }
     .scada-ministry-text {
         text-align: right;
-        line-height: 1.35;
-        color: #1e293b;
+        line-height: 1.3;
     }
-    .metric-card {
-        border-radius: 12px;
-        padding: 14px 16px;
-        color: #ffffff;
+
+    /* Modern Neutral Card Architecture with high scanability */
+    .scada-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-        margin-bottom: 8px;
-        background: linear-gradient(90deg, #0039a6 0%, #0088cc 55%, #00c4eb 100%);
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+        transition: border-color 0.15s ease-in-out;
     }
-    .metric-card-main {
-        border-radius: 14px;
-        padding: 16px 18px;
-        color: #ffffff;
+    .scada-card:hover {
+        border-color: #94a3b8;
+    }
+    .scada-card-main {
+        background-color: #0f172a;
+        border: 1px solid #0f172a;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
         text-align: center;
-        box-shadow: 0 6px 16px rgba(0, 57, 166, 0.22);
-        margin-bottom: 8px;
-        background: linear-gradient(90deg, #0039a6 0%, #0088cc 55%, #00c4eb 100%);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     .card-title-main {
-        font-size: 1.35rem;
-        font-weight: 800;
+        font-size: 1.15rem;
+        font-weight: 700;
         margin-bottom: 8px;
-        color: #ffffff;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
     }
-    .card-value-pill {
+    .card-value-pill-main {
         display: inline-block;
         background-color: #ffffff;
-        color: #d90429;
-        font-size: 1.55rem;
-        font-weight: 900;
-        padding: 4px 22px;
-        border-radius: 8px;
-        letter-spacing: 0.5px;
-        direction: ltr;
-        box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+        color: #0f172a;
+        font-size: 1.65rem;
+        font-weight: 800;
+        padding: 4px 24px;
+        border-radius: 6px;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        border: 2px solid #e2e8f0;
     }
     .card-title {
-        font-size: 1.05rem;
-        font-weight: 700;
-        margin-bottom: 2px;
-        color: #ffffff;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #475569;
     }
     .card-value {
-        font-size: 1.25rem;
-        font-weight: 800;
-        letter-spacing: 0.5px;
-        color: #ffffff;
+        font-size: 1.35rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: #0f172a;
         direction: ltr;
     }
     .math-operator {
-        font-size: 1.85rem;
-        font-weight: 900;
+        font-size: 1.5rem;
+        font-weight: 800;
         text-align: center;
-        color: #d90429;
-        margin: -4px 0;
-        line-height: 1.1;
+        color: #64748b;
+        margin: -4px 0 6px 0;
+        line-height: 1;
     }
+
+    /* Accessibility Legend: Patterns, Symbols & Weights */
     .legend-box {
-        border: 1px solid #94a3b8;
+        border: 1px solid #cbd5e1;
         background-color: #ffffff;
-        width: 82%;
-        margin: 8px auto 0 auto;
-        font-size: 1.0rem;
-        font-weight: 700;
-        color: #1e293b;
+        border-radius: 6px;
+        width: 100%;
+        margin-top: 12px;
+        font-size: 0.88rem;
     }
     .legend-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 6px 12px;
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f5f9;
         direction: rtl;
     }
     .legend-row:last-child {
         border-bottom: none;
     }
-    .legend-color {
-        width: 18px;
-        height: 24px;
-        display: inline-block;
-        margin-left: 8px;
-    }
-    .zone-badge {
-        padding: 8px 14px;
-        border-radius: 6px;
+
+    /* Color-blind fallback badge indicators */
+    .badge-safe {
+        border: 2px solid #16a34a;
+        background-color: #f0fdf4;
+        color: #14532d;
+        padding: 2px 8px;
+        border-radius: 4px;
         font-weight: 700;
-        font-size: 0.95rem;
-        text-align: center;
-        margin-bottom: 8px;
     }
-    .zone-safe { background-color: #5cb85c; color: #ffffff; }
-    .zone-warning { background-color: #f0ad4e; color: #ffffff; }
-    .zone-critical { background-color: #d9534f; color: #ffffff; }
+    .badge-warning {
+        border: 2px dashed #d97706;
+        background-color: #fffbeb;
+        color: #78350f;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 700;
+    }
+    .badge-critical {
+        border: 2px double #dc2626;
+        background: repeating-linear-gradient(45deg, #fef2f2, #fef2f2 6px, #fee2e2 6px, #fee2e2 12px);
+        color: #7f1d1d;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 800;
+    }
+
+    /* Quick Telemetry Pill Bar */
+    .telemetry-strip {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 8px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-size: 0.88rem;
+        color: #334155;
+        font-variant-numeric: tabular-nums;
+    }
+    .telemetry-strip strong {
+        color: #0f172a;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -265,25 +314,24 @@ ts_val = pd.to_datetime(scada["timestamp"])
 ts_formatted = ts_val.strftime("%d/%m/%Y %I:%M:%S %p")
 
 logo_img_html = (
-    f'<img src="data:image/svg+xml;base64,{LOGO_B64}" width="68" height="68" alt="MEW Emblem" />'
+    f'<img src="data:image/svg+xml;base64,{LOGO_B64}" width="60" height="60" alt="MEW Emblem" />'
     if LOGO_B64
     else ""
 )
 
-# Official Header Banner matching Sample Dashboard Screenshot + Live Telemetry Metadata
+# Header Banner
 st.markdown(
     f"""
     <div class="scada-header-bar">
         <div class="scada-header-left">
-            <h2>نظام توليد الطاقة</h2>
-            <div class="sub">اخر تحديث من SCADA</div>
-            <div class="ts">{ts_formatted}</div>
+            <h2>نظام توليد الطاقة والتحكم اللحظي</h2>
+            <div class="sub">SCADA Generation &amp; Grid Load Monitoring Hub</div>
+            <div class="ts">Live SCADA: {ts_formatted}</div>
         </div>
         <div class="scada-header-right">
             <div class="scada-ministry-text">
                 <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">وزارة الكهرباء والماء والطاقة المتجددة</div>
-                <div style="font-size: 0.92rem; font-weight: 700; color: #334155;">Ministry of Electricity &amp; Water &amp; Renewable Energy</div>
-                <div style="font-size: 0.85rem; font-weight: 600; color: #475569;">State of Kuwait | دولة الكويت</div>
+                <div style="font-size: 0.88rem; font-weight: 600; color: #475569;">State of Kuwait | دولة الكويت</div>
             </div>
             {logo_img_html}
         </div>
@@ -292,22 +340,26 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Telemetry Strip
 st.markdown(
-    f"**آخر تحديث مباشر:** `{ts_formatted}` "
-    f"| **التردد:** `{float(scada.get('frequency_hz', 50.0)):.2f} Hz` "
-    f"| **الحرارة:** `{float(scada.get('temp_c', 38.5)):.1f} °C` "
-    f"| **المولدات العاملة:** `{int(scada.get('active_generators', 18))}` "
-    f"| **هامش الاحتياطي:** `{float(scada.get('reserve_margin_mw', 3122.0)):,.0f} MW`"
+    f"""
+    <div class="telemetry-strip">
+        <div><strong>آخر تحديث:</strong> {ts_formatted}</div>
+        <div><strong>التردد:</strong> {float(scada.get('frequency_hz', 50.0)):.2f} Hz</div>
+        <div><strong>الحرارة:</strong> {float(scada.get('temp_c', 38.5)):.1f} °C</div>
+        <div><strong>المولدات النشطة:</strong> {int(scada.get('active_generators', 18))}</div>
+        <div><strong>هامش الاحتياطي:</strong> {float(scada.get('reserve_margin_mw', 3122.0)):,.0f} MW</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-
-st.markdown("---")
 
 tab_scada, tab_forecast, tab_whatif, tab_agent = st.tabs(
     [
         "⚡ لوحة التحكم اللحظية (SCADA Balance)",
         "📈 توقعات ذروة الأحمال لـ 30 يوماً (ARIMA+)",
         "🧪 محاكاة سيناريوهات الإجهاد الحراري (What-If BQML)",
-        "🤖 المساعد الذكي المعتمد (BigQuery Data Agent)",
+        "🤖 وكيل طاقة الكويت (KEI Agent)",
     ]
 )
 
@@ -319,7 +371,7 @@ with tab_scada:
         load_val = float(scada["current_load_mw"])
         load_pct = float(scada.get("load_percentage", (load_val / cap_val * 100.0) if cap_val else 70.0))
 
-        # Analog Dial Gauge calibrated to 0-100 scale (matching screenshot dial 0..100 with digital MW readout)
+        # Modern High-Contrast Gauge with Color-Blind Distinguishable Steps
         fig = go.Figure(
             go.Indicator(
                 mode="gauge+number",
@@ -327,26 +379,30 @@ with tab_scada:
                 number={
                     "suffix": " %",
                     "valueformat": ".1f",
-                    "font": {"size": 20, "family": "Cairo", "color": "#1e293b"},
+                    "font": {"size": 22, "family": "-apple-system, BlinkMacSystemFont, Segoe UI", "color": "#0f172a"},
                 },
                 title={
-                    "text": f"<b>MW</b><br><span style='font-size:22px;color:#0f172a;border:1px solid #94a3b8;padding:2px 10px;background:#f8fafc;'>{load_val:.0f}</span>",
-                    "font": {"size": 16, "family": "Cairo"},
+                    "text": (
+                        f"<b>الحمل اللحظي</b><br>"
+                        f"<span style='font-size:24px;font-weight:800;color:#0f172a;border:1px solid #cbd5e1;padding:2px 12px;background:#ffffff;border-radius:4px;'>"
+                        f"{load_val:,.0f} MW</span>"
+                    ),
+                    "font": {"size": 14, "family": "-apple-system, BlinkMacSystemFont, Segoe UI", "color": "#475569"},
                 },
                 gauge={
-                    "axis": {"range": [0, 100], "tickwidth": 2, "tickcolor": "#334155", "dtick": 10},
-                    "bar": {"color": "#334155", "thickness": 0.22},
-                    "bgcolor": "#f1f5f9",
-                    "borderwidth": 3,
+                    "axis": {"range": [0, 100], "tickwidth": 2, "tickcolor": "#0f172a", "dtick": 10},
+                    "bar": {"color": "#0f172a", "thickness": 0.24},
+                    "bgcolor": "#f8fafc",
+                    "borderwidth": 2,
                     "bordercolor": "#cbd5e1",
                     "steps": [
-                        {"range": [0, 85], "color": "#7ac143"},
-                        {"range": [85, 95], "color": "#f59e0b"},
-                        {"range": [95, 100], "color": "#ef4444"},
+                        {"range": [0, 85], "color": "#dcfce7"},      # Light distinct green
+                        {"range": [85, 95], "color": "#fef3c7"},     # Light distinct amber
+                        {"range": [95, 100], "color": "#fee2e2"},    # Light distinct red
                     ],
                     "threshold": {
-                        "line": {"color": "#0f172a", "width": 5},
-                        "thickness": 0.82,
+                        "line": {"color": "#0284c7", "width": 4},
+                        "thickness": 0.85,
                         "value": min(100.0, max(0.0, load_pct)),
                     },
                 },
@@ -354,26 +410,26 @@ with tab_scada:
         )
         fig.update_layout(
             height=300,
-            margin=dict(l=18, r=18, t=35, b=10),
+            margin=dict(l=14, r=14, t=35, b=10),
             paper_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # Status Zone Legend matching screenshot + percentages
+        # Legend with Line Weights, Patterns, and Visual Symbols for Full Accessibility
         st.markdown(
             """
             <div class="legend-box">
                 <div class="legend-row">
-                    <span>التشغيل الآمن (&lt; 85%)</span>
-                    <span class="legend-color" style="background-color: #7ac143;"></span>
+                    <span><b>[✔] التشغيل الآمن</b> (&lt; 85%)</span>
+                    <span class="badge-safe">Solid &bull; نمط متصل</span>
                 </div>
                 <div class="legend-row">
-                    <span>التشغيل الغير آمن (85% - 95%)</span>
-                    <span class="legend-color" style="background-color: #f59e0b;"></span>
+                    <span><b>[▲] التشغيل الحرج</b> (85% - 95%)</span>
+                    <span class="badge-warning">Dashed &bull; نمط متقطع</span>
                 </div>
                 <div class="legend-row">
-                    <span>القطع المبرمج (&gt; 95%)</span>
-                    <span class="legend-color" style="background-color: #ef4444;"></span>
+                    <span><b>[✖] القطع المبرمج</b> (&gt; 95%)</span>
+                    <span class="badge-critical">Striped &bull; نمط مضلع</span>
                 </div>
             </div>
             """,
@@ -383,24 +439,24 @@ with tab_scada:
     with c_load:
         st.markdown(
             f"""
-            <div class="metric-card-main">
-                <div class="card-title-main">الأحمال الحالية</div>
-                <div class="card-value-pill">{scada['current_load_mw']:.0f} MW</div>
+            <div class="scada-card-main">
+                <div class="card-title-main">الأحمال الحالية (Current Load)</div>
+                <div class="card-value-pill-main">{scada['current_load_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">=</div>
-            <div class="metric-card">
-                <div class="card-title">إجمالي الإنتاج الحالي</div>
-                <div class="card-value">{scada['net_generation_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">إجمالي الإنتاج الحالي (Net Generation)</div>
+                <div class="card-value">{scada['net_generation_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">+</div>
-            <div class="metric-card">
-                <div class="card-title">تبادل الطاقة الحالي مع الربط الخليجي</div>
-                <div class="card-value">{scada['gcc_exchange_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">تبادل الطاقة مع الربط الخليجي (GCC Exchange)</div>
+                <div class="card-value">{scada['gcc_exchange_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">+</div>
-            <div class="metric-card">
-                <div class="card-title">الأحمال المفصوله</div>
-                <div class="card-value">{scada['loadshed_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">الأحمال المفصولة (Load Shedding)</div>
+                <div class="card-value">{scada['loadshed_mw']:,.0f} MW</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -409,36 +465,37 @@ with tab_scada:
     with c_cap:
         st.markdown(
             f"""
-            <div class="metric-card-main">
-                <div class="card-title-main">القدرة المتوفرة</div>
-                <div class="card-value-pill">{scada['available_capacity_mw']:.0f} MW</div>
+            <div class="scada-card-main">
+                <div class="card-title-main">القدرة المتوفرة (Available Capacity)</div>
+                <div class="card-value-pill-main">{scada['available_capacity_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">=</div>
-            <div class="metric-card">
-                <div class="card-title">الإنتاج الكلي</div>
-                <div class="card-value">{scada['gross_production_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">الإنتاج الكلي (Gross Production)</div>
+                <div class="card-value">{scada['gross_production_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">+</div>
-            <div class="metric-card">
-                <div class="card-title">الطاقة الإحتياطية المتوفرة</div>
-                <div class="card-value">{scada['available_reserve_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">الطاقة الإحتياطية المتوفرة (Available Reserve)</div>
+                <div class="card-value">{scada['available_reserve_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">+</div>
-            <div class="metric-card">
-                <div class="card-title">الطاقة المزودة من الربط الخليجي</div>
-                <div class="card-value">{scada['gcc_supplied_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">الطاقة المزودة من الربط الخليجي (GCC Supplied)</div>
+                <div class="card-value">{scada['gcc_supplied_mw']:,.0f} MW</div>
             </div>
             <div class="math-operator">-</div>
-            <div class="metric-card">
-                <div class="card-title">الإحتياطي المطلوب الإلتزام به مع الربط الخليجي</div>
-                <div class="card-value">{scada['gcc_obligation_mw']:.0f} MW</div>
+            <div class="scada-card">
+                <div class="card-title">الإحتياطي المطلوب للربط الخليجي (GCC Obligation)</div>
+                <div class="card-value">{scada['gcc_obligation_mw']:,.0f} MW</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
 with tab_forecast:
-    st.markdown("### توقعات ذروة الأحمال للأيام الـ 30 القادمة")
+    st.markdown("### 📈 توقعات ذروة الأحمال للأيام الـ 30 القادمة (ARIMA_PLUS)")
+    st.caption("تنبؤات دقيقة مبنية على الطبقة الذهبية `forecast_30d` مع فترات الثقة 85%.")
     df_fc = fetch_gold_forecast()
     fig_fc = go.Figure()
     fig_fc.add_trace(
@@ -446,7 +503,7 @@ with tab_forecast:
             x=pd.concat([df_fc["forecast_date"], df_fc["forecast_date"][::-1]]),
             y=pd.concat([df_fc["upper_bound_mw"], df_fc["lower_bound_mw"][::-1]]),
             fill="toself",
-            fillcolor="rgba(0, 86, 150, 0.12)",
+            fillcolor="rgba(2, 132, 199, 0.10)",
             line=dict(color="rgba(255,255,255,0)"),
             name="مجال الثقة 85%",
         )
@@ -456,15 +513,23 @@ with tab_forecast:
             x=df_fc["forecast_date"],
             y=df_fc["predicted_peak_mw"],
             mode="lines+markers",
-            line=dict(color="#005696", width=3),
+            line=dict(color="#0284c7", width=3),
+            marker=dict(size=6, color="#0f172a"),
             name="ذروة الحمل المتوقعة (MW)",
         )
     )
-    fig_fc.update_layout(template="plotly_white", height=450, hovermode="x unified")
+    fig_fc.update_layout(
+        template="plotly_white",
+        height=450,
+        hovermode="x unified",
+        font=dict(family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto"),
+        margin=dict(l=20, r=20, t=20, b=20),
+    )
     st.plotly_chart(fig_fc, use_container_width=True)
 
 with tab_whatif:
-    st.markdown("### محاكاة الإجهاد الحراري وتأثير الطقس")
+    st.markdown("### 🧪 محاكاة سيناريوهات الإجهاد الحراري (What-If BQML)")
+    st.caption("نموذج Boosted Tree Regressor للتنبؤ الفوري بالحمل الأقصى تحت ظروف طقس متطرفة.")
     c_in, c_out = st.columns([1, 2])
     with c_in:
         sim_temp = st.slider("درجة الحرارة المتوقعة (°C)", 15.0, 58.0, 48.0, 0.5)
