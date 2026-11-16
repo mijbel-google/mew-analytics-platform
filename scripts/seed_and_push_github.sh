@@ -29,7 +29,7 @@ if [[ -z "$(git config user.name || true)" ]]; then
     git config user.name "${GIT_AUTHOR_NAME:-MEW Analytics Platform}"
 fi
 if [[ -z "$(git config user.email || true)" ]]; then
-    git config user.email "${GIT_AUTHOR_EMAIL:-admin@mijbel.altostrat.com}"
+    git config user.email "${GIT_AUTHOR_EMAIL:-noreply@example.com}"
 fi
 
 echo "==> [2/4] Staging codebase, documentation, and scripts..."
