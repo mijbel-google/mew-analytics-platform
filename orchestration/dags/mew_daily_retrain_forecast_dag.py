@@ -10,7 +10,10 @@ from __future__ import annotations
 import datetime
 import os
 
-from airflow.models.dag import DAG
+try:
+    from airflow.sdk import DAG
+except ImportError:
+    from airflow.models.dag import DAG
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
 DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_ID", "electric-load-demo"))

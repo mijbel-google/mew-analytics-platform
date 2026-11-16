@@ -11,6 +11,7 @@ unset CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE GOOGLE_API_CERTIFICATE_CONFI
 PROJECT_ID="${GCP_PROJECT_ID:-electric-load-demo}"
 REGION="${GCP_LOCATION:-europe-west4}"
 COMPOSER_ENV_NAME="${COMPOSER_ENV_NAME:-mew-airflow-env}"
+COMPOSER_IMAGE_VERSION="${COMPOSER_IMAGE_VERSION:-composer-3-airflow-3}"
 DATASET_NAME="${DATASET_NAME:-mew_analytics}"
 RAW_POWER_STAT_TABLE="${RAW_POWER_STAT_TABLE:-POWER_STAT}"
 RAW_GENERATOR_TABLE="${RAW_GENERATOR_TABLE:-GENERATOR_READINGS}"
@@ -64,12 +65,13 @@ if gcloud composer environments describe "${COMPOSER_ENV_NAME}" \
         --project="${PROJECT_ID}" \
         --update-env-variables="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},BQ_DATASET=${DATASET_NAME},DATAFORM_REPOSITORY=${DATAFORM_REPO},PUBSUB_ALERT_TOPIC=${PUBSUB_TOPIC}" || true
 else
-    echo "    Creating Cloud Composer 3 environment '${COMPOSER_ENV_NAME}' (Small tier)..."
+    echo "    Creating Managed Airflow Gen 3 (Cloud Composer 3) environment '${COMPOSER_ENV_NAME}' (${COMPOSER_IMAGE_VERSION}, Small tier)..."
     gcloud composer environments create "${COMPOSER_ENV_NAME}" \
         --location="${REGION}" \
         --project="${PROJECT_ID}" \
-        --image-version="composer-3-airflow-2.10.2" \
+        --image-version="${COMPOSER_IMAGE_VERSION}" \
         --environment-size="small" \
+        --labels="datacloud=antigravity" \
         --service-account="${SERVICE_ACCOUNT}" \
         --env-variables="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},BQ_DATASET=${DATASET_NAME},DATAFORM_REPOSITORY=${DATAFORM_REPO},PUBSUB_ALERT_TOPIC=${PUBSUB_TOPIC}"
 fi

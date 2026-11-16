@@ -166,7 +166,7 @@ chmod +x deploy_mew_solution.sh \
 | **Step 1** | Manual / *Dev Only* | Connect DB Bronze Tables *(or `dev_tools/seed_argolis_bronze.sh`)* | Ensure `POWER_STAT` and `GENERATOR_READINGS` exist in `<DATASET_NAME>` |
 | **Step 2** | **Shell Script** | `./deploy_mew_solution.sh` | Master deployment: APIs, IAM, Silver/Gold tables, BQML models, Cloud Run app |
 | **Step 3** | **Manual (Console)** | Create & link **Dataform Repository** (Option A) | Required for Cloud Composer DAGs to compile & run Dataform pipelines |
-| **Step 4** | **Shell Script** | `./orchestration/deploy_schedulers.sh` | Provision Cloud Composer 3 (`deploy_composer_env.sh`) & upload DAGs (`sync_dags.sh`) |
+| **Step 4** | **Shell Script** | `./orchestration/deploy_schedulers.sh` | Provision Managed Airflow Gen 3 (`composer-3-airflow-3`) & upload Airflow 3 DAGs |
 | **Step 5** | **Manual (Console)** | Create & deploy **BigQuery Conversational Agent (KEI Agent)** | Provision Gold-only BigQuery Data Agent & capture Agent ID |
 | **Step 6** | **Shell Script** | `./data_app/deploy_app.sh` *(if Agent ID/UI updated)* | Rebuild & redeploy Streamlit SCADA Data App with updated env vars / UI |
 
@@ -257,20 +257,20 @@ Follow **Option A (Google Cloud Console)**:
 
 ---
 
-### Step 4 (Shell Scripts): Provision Managed Airflow (Cloud Composer) & Sync DAGs
-If Cloud Composer was skipped during Step 2 (`PROVISION_NEW_COMPOSER_ENV="false"`), run the orchestration scripts manually in order (takes ~20–30 minutes to provision a new Composer 3 environment):
+### Step 4 (Shell Scripts): Provision Managed Airflow Gen 3 (Cloud Composer 3) & Sync DAGs
+If Managed Airflow was skipped during Step 2 (`PROVISION_NEW_COMPOSER_ENV="false"`), run the orchestration scripts manually in order (takes ~20–30 minutes to provision a new Managed Airflow Gen 3 environment using `composer-3-airflow-3`):
 
 ```bash
 # Export environment variables matching your deployment (or source mew-env.conf)
 source mew-env.conf
-export GCP_PROJECT_ID GCP_LOCATION DATASET_NAME RAW_POWER_STAT_TABLE RAW_GENERATOR_TABLE DATAFORM_REPO PUBSUB_TOPIC COMPOSER_ENV_NAME SERVICE_ACCOUNT_NAME
+export GCP_PROJECT_ID GCP_LOCATION DATASET_NAME RAW_POWER_STAT_TABLE RAW_GENERATOR_TABLE DATAFORM_REPO PUBSUB_TOPIC COMPOSER_ENV_NAME COMPOSER_IMAGE_VERSION SERVICE_ACCOUNT_NAME
 
 # Option 1: Run the combined wrapper (runs deploy_composer_env.sh then sync_dags.sh)
 ./orchestration/deploy_schedulers.sh
 
 # Option 2: Run each script individually in order
-./orchestration/deploy_composer_env.sh   # Provisions Composer 3, Pub/Sub topic & env vars
-./orchestration/sync_dags.sh             # Uploads DAGs to GCS & sets Airflow Variables
+./orchestration/deploy_composer_env.sh   # Provisions Managed Airflow Gen 3, Pub/Sub topic & env vars
+./orchestration/sync_dags.sh             # Uploads Airflow 3 DAGs to GCS & sets Airflow Variables
 ```
 Whenever you update DAG Python files under `orchestration/dags/` later, re-run only `./orchestration/sync_dags.sh`.
 

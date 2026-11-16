@@ -11,8 +11,12 @@ import json
 import os
 from typing import Any
 
-from airflow.models.dag import DAG
-from airflow.operators.python import PythonOperator
+try:
+    from airflow.sdk import DAG
+    from airflow.providers.standard.operators.python import PythonOperator
+except ImportError:
+    from airflow.models.dag import DAG
+    from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.providers.google.cloud.operators.dataform import (
     DataformCreateCompilationResultOperator,
