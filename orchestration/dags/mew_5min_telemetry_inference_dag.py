@@ -31,12 +31,17 @@ DEFAULT_DATAFORM_REPO = os.environ.get("DATAFORM_REPOSITORY", "mew-grid-pipeline
 DEFAULT_DATAFORM_WORKSPACE = os.environ.get("DATAFORM_WORKSPACE", "mew-workspace")
 DATAFORM_GIT_COMMITISH = os.environ.get("DATAFORM_GIT_COMMITISH", "").strip()
 DEFAULT_PUBSUB_TOPIC = os.environ.get("PUBSUB_ALERT_TOPIC", "grid-stress-alerts")
+DEFAULT_SERVICE_ACCOUNT = os.environ.get(
+    "DATAFORM_SERVICE_ACCOUNT",
+    f"mew-pipeline-sa@{DEFAULT_PROJECT_ID}.iam.gserviceaccount.com",
+)
 
 PROJECT_ID_JINJA = "{{ var.value.get('gcp_project_id', '" + DEFAULT_PROJECT_ID + "') }}"
 LOCATION_JINJA = "{{ var.value.get('gcp_location', '" + DEFAULT_LOCATION + "') }}"
 DATASET_JINJA = "{{ var.value.get('bq_dataset', '" + DEFAULT_DATASET + "') }}"
 DATAFORM_REPO_JINJA = "{{ var.value.get('dataform_repository', '" + DEFAULT_DATAFORM_REPO + "') }}"
 DATAFORM_WORKSPACE_JINJA = "{{ var.value.get('dataform_workspace', '" + DEFAULT_DATAFORM_WORKSPACE + "') }}"
+DATAFORM_SA_JINJA = "{{ var.value.get('dataform_service_account', '" + DEFAULT_SERVICE_ACCOUNT + "') }}"
 RAW_POWER_STAT_JINJA = "{{ var.value.get('raw_power_stat_table', 'POWER_STAT') }}"
 RAW_GENERATOR_JINJA = "{{ var.value.get('raw_generator_table', 'GENERATOR_READINGS') }}"
 PUBSUB_TOPIC_JINJA = "{{ var.value.get('pubsub_alert_topic', '" + DEFAULT_PUBSUB_TOPIC + "') }}"
@@ -160,6 +165,7 @@ with DAG(
             "invocation_config": {
                 "included_tags": ["microbatch_5min"],
                 "transitive_dependencies_included": True,
+                "service_account": DATAFORM_SA_JINJA,
             },
         },
     )
