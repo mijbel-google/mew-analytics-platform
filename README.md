@@ -76,7 +76,8 @@ mew-analytics-platform/
 │   ├── system_instructions.txt               # Domain guardrails & balance equations for KEI Agent
 │   └── golden_queries_catalog.sql            # Verified golden SQL queries (Gold layer only)
 ├── scripts/
-│   └── seed_and_push_github.sh               # GitHub seeding & remote push automation
+│   ├── seed_and_push_github.sh               # OPTIONAL: GitHub seeding & remote push automation
+│   └── setup_dataform_github.sh              # OPTIONAL: Push `dataform` subtree branch & link Airflow Git mode
 └── dev_tools/                                # Internal developer validation scripts (Argolis only)
     ├── generate_argolis_synthetic_data.sql   # AI.GENERATE_TABLE synthetic SCADA generator
     └── seed_argolis_bronze.sh                # Argolis bronze seeding script (NOT for customer prod)
@@ -165,8 +166,9 @@ chmod +x deploy_mew_solution.sh \
 | **Step 0** | Manual CLI | `gcloud auth login` & `gcloud config set project` | Authenticate operator session & assign target GCP project |
 | **Step 1** | Manual / *Dev Only* | Connect DB Bronze Tables *(or `dev_tools/seed_argolis_bronze.sh`)* | Ensure `POWER_STAT` and `GENERATOR_READINGS` exist in `<DATASET_NAME>` |
 | **Step 2** | **Shell Script** | `./deploy_mew_solution.sh` | Master deployment: APIs, IAM, Silver/Gold tables, BQML models, Cloud Run app |
-| **Step 3** | **Manual (Console)** | Create & link **Dataform Repository** (Option A) | Required for Cloud Composer DAGs to compile & run Dataform pipelines |
-| **Step 4** | **Shell Script** | `./orchestration/deploy_schedulers.sh` | Provision Managed Airflow Gen 3 (`composer-3-airflow-3`) & upload Airflow 3 DAGs |
+| **Step 3a** | **Manual (Console)** | Create **Dataform Repository** (`mew-grid-pipeline`) | Required for Dataform workflows (`mew-workspace` if air-gapped / no GitHub) |
+| **Step 3b** | **OPTIONAL (GitHub)** | Link GitHub + `./scripts/setup_dataform_github.sh` | **Optional**: Only if your organization uses GitHub (pushes `dataform` branch & links Airflow) |
+| **Step 4** | **Shell Script** | `./orchestration/deploy_schedulers.sh` | Provision Managed Airflow Gen 3 (`composer-3-airflow-3`) & upload paused 5-min DAG |
 | **Step 5** | **Manual (Console)** | Create & deploy **BigQuery Conversational Agent (KEI Agent)** | Provision Gold-only BigQuery Data Agent & capture Agent ID |
 | **Step 6** | **Shell Script** | `./data_app/deploy_app.sh` *(if Agent ID/UI updated)* | Rebuild & redeploy Streamlit SCADA Data App with updated env vars / UI |
 
@@ -234,15 +236,12 @@ The script will interactively:
 
 ---
 
-### Step 3 (Manual — Option A via Cloud Console): Create & Connect the Dataform Repository (Least Privilege)
+### Step 3 (Manual — Option A via Cloud Console): Create Dataform Repository & Optional GitHub Setup
 
 > **Why this manual step is required**:  
-> `deploy_mew_solution.sh` parameterizes the local `dataform/workflow_settings.yaml` file and materializes Silver/Gold tables directly via BigQuery SQL (`materialize_medallion_tables.sql`), but it does **not** automatically create the remote Dataform repository resource in GCP. Creating and connecting the repository in the Cloud Console is required so that Managed Airflow (`mew_5min_telemetry_inference_dag`) can trigger `DataformCreateCompilationResultOperator` and `DataformCreateWorkflowInvocationOperator`.
->
-> **Note on Managed Airflow vs. Dataform GitHub Access**:  
-> Managed Airflow (Cloud Composer 3) does **NOT** need to be connected to GitHub or hold a GitHub token. Airflow reads its DAG Python files from its Cloud Storage DAGs bucket (synced by `sync_dags.sh`), and calls the Dataform API; Dataform itself pulls from GitHub using Secret Manager.
+> `deploy_mew_solution.sh` parameterizes the local `dataform/workflow_settings.yaml` file and materializes Silver/Gold tables directly via BigQuery SQL (`materialize_medallion_tables.sql`), but it does **not** automatically create the remote Dataform repository resource in GCP. Creating the repository in the Cloud Console is required so that Managed Airflow (`mew_5min_telemetry_inference_dag`) can trigger `DataformCreateCompilationResultOperator` and `DataformCreateWorkflowInvocationOperator`.
 
-#### 3.1 Create the Dataform Repository in Cloud Console
+#### 3a. Create the Dataform Repository in Cloud Console (Required)
 1. Open the **[Google Cloud Console — BigQuery Dataform](https://console.cloud.google.com/bigquery/dataform?project=electric-load-demo)** page.
 2. Ensure your target project (e.g., `electric-load-demo`) is selected in the top bar.
 3. Click **+ Create repository**:
@@ -252,8 +251,17 @@ The script will interactively:
 4. **Grant BigQuery Permissions to the Dataform Service Account**:
    - Inside your new Dataform repository, note the Dataform Service Agent (`service-<PROJECT_NUMBER>@gcp-sa-dataform.iam.gserviceaccount.com`).
    - In **IAM & Admin → IAM**, grant it **`roles/bigquery.admin`** on your project so Dataform can compile and materialize Silver/Gold tables and assertions.
+5. **If NOT Using GitHub (Air-Gapped / No Company-Approved GitHub)**:
+   - Inside `mew-grid-pipeline`, click **Create Development Workspace** and name it **`mew-workspace`**.
+   - Upload the files from your local `dataform/` folder into `mew-workspace` (preserving `workflow_settings.yaml`, `includes/`, and `definitions/`).
+   - You can skip **Step 3b** below — `mew_5min_telemetry_inference_dag` automatically compiles from `mew-workspace` when `DATAFORM_GIT_COMMITISH` is unset.
 
-#### 3.2 Create a Least-Privilege GitHub Fine-Grained Personal Access Token (PAT)
+---
+
+#### 3b. [OPTIONAL] Connect Dataform to GitHub (Only If Using Approved GitHub)
+*Skip this entire section if your organization does not use GitHub.*
+
+##### 1) Create a Least-Privilege GitHub Fine-Grained Personal Access Token (PAT)
 Use a **Fine-grained token** scoped to a single repository rather than a Classic PAT:
 1. Go to **GitHub → Profile Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
 2. Configure:
@@ -267,7 +275,7 @@ Use a **Fine-grained token** scoped to a single repository rather than a Classic
    - Leave all other permissions as **No access**.
 5. Click **Generate token** and copy the `github_pat_...` value.
 
-#### 3.3 Store the Token in Secret Manager (Secret-Level IAM Only)
+##### 2) Store the Token in Secret Manager (Secret-Level IAM Only)
 1. Open **[Google Cloud Console — Security → Secret Manager](https://console.cloud.google.com/security/secret-manager?project=electric-load-demo)** *(enable `secretmanager.googleapis.com` if prompted)*.
 2. Click **+ Create Secret**:
    - **Name**: `dataform-github-mew-pat`
@@ -279,13 +287,18 @@ Use a **Fine-grained token** scoped to a single repository rather than a Classic
    - **Role**: **`Secret Manager Secret Accessor`** (`roles/secretmanager.secretAccessor`)
    - Click **Save**.
 
-#### 3.4 Link GitHub in Dataform Console
+##### 3) Link GitHub in Dataform Console & Run Optional Sync Script
 1. Open your Dataform repository (`mew-grid-pipeline`) → **Settings → Git connection → Connect with HTTPS**.
 2. Enter:
    - **Remote Git repository URL**: `https://github.com/mijbel-google/mew-analytics-platform.git` *(or your organization's fork)*.
-   - **Default branch name**: `main` *(or a dedicated `dataform` subtree branch where `workflow_settings.yaml` sits at branch root)*.
+   - **Default branch name**: `dataform` *(a dedicated subtree branch where `workflow_settings.yaml` resides at the branch root)*.
    - **Secret**: `dataform-github-mew-pat` (latest version).
-3. Click **Save** and confirm the connection status shows **Connected**. *(If operating air-gapped without GitHub, click **Create Development Workspace** and upload the contents of `dataform/` directly.)*
+3. Click **Save** and confirm the connection status shows **Connected**.
+4. Run the **optional** helper script to push the `dataform/` subtree to the `dataform` branch, verify compilation, and configure Managed Airflow (if already provisioned) to compile from `dataform`:
+   ```bash
+   chmod +x scripts/setup_dataform_github.sh
+   ./scripts/setup_dataform_github.sh
+   ```
 
 ---
 
@@ -305,6 +318,15 @@ export GCP_PROJECT_ID GCP_LOCATION DATASET_NAME RAW_POWER_STAT_TABLE RAW_GENERAT
 ./orchestration/sync_dags.sh             # Uploads Airflow 3 DAGs to GCS & sets Airflow Variables
 ```
 Whenever you update DAG Python files under `orchestration/dags/` later, re-run only `./orchestration/sync_dags.sh`.
+
+*(Note: If you connected GitHub in **Step 3b**, remember to also run `./scripts/setup_dataform_github.sh` after provisioning Composer so `DATAFORM_GIT_COMMITISH=dataform` is set on the environment.)*
+
+#### How to Start the 5-Minute DAG from the Google Cloud Console
+By design, `mew_5min_telemetry_inference_dag` is deployed in a **paused** state (`is_paused_upon_creation=True`) so it does not run automatically until you verify Dataform is ready:
+1. Open **[Google Cloud Console — Composer (Managed Airflow)](https://console.cloud.google.com/composer/environments?project=electric-load-demo)** and click **`mew-airflow-env`**.
+2. Click **Open Airflow UI** (at the top of the environment details page).
+3. In the Airflow UI **DAGs** list, locate **`mew_5min_telemetry_inference_dag`**.
+4. Toggle the **Pause / Unpause switch** on the left of the DAG row to **ON (Active)** to start the 5-minute schedule, or click the **Play (▶) Trigger DAG** button on the right to run an immediate test execution.
 
 ---
 

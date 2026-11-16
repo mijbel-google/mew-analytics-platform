@@ -28,12 +28,15 @@ DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_I
 DEFAULT_LOCATION = os.environ.get("GCP_LOCATION", "europe-west4")
 DEFAULT_DATASET = os.environ.get("BQ_DATASET", "mew_analytics")
 DEFAULT_DATAFORM_REPO = os.environ.get("DATAFORM_REPOSITORY", "mew-grid-pipeline")
+DEFAULT_DATAFORM_WORKSPACE = os.environ.get("DATAFORM_WORKSPACE", "mew-workspace")
+DATAFORM_GIT_COMMITISH = os.environ.get("DATAFORM_GIT_COMMITISH", "").strip()
 DEFAULT_PUBSUB_TOPIC = os.environ.get("PUBSUB_ALERT_TOPIC", "grid-stress-alerts")
 
 PROJECT_ID_JINJA = "{{ var.value.get('gcp_project_id', '" + DEFAULT_PROJECT_ID + "') }}"
 LOCATION_JINJA = "{{ var.value.get('gcp_location', '" + DEFAULT_LOCATION + "') }}"
 DATASET_JINJA = "{{ var.value.get('bq_dataset', '" + DEFAULT_DATASET + "') }}"
 DATAFORM_REPO_JINJA = "{{ var.value.get('dataform_repository', '" + DEFAULT_DATAFORM_REPO + "') }}"
+DATAFORM_WORKSPACE_JINJA = "{{ var.value.get('dataform_workspace', '" + DEFAULT_DATAFORM_WORKSPACE + "') }}"
 RAW_POWER_STAT_JINJA = "{{ var.value.get('raw_power_stat_table', 'POWER_STAT') }}"
 RAW_GENERATOR_JINJA = "{{ var.value.get('raw_generator_table', 'GENERATOR_READINGS') }}"
 PUBSUB_TOPIC_JINJA = "{{ var.value.get('pubsub_alert_topic', '" + DEFAULT_PUBSUB_TOPIC + "') }}"
@@ -109,18 +112,30 @@ with DAG(
     schedule="*/5 * * * *",
     start_date=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
     catchup=False,
+    is_paused_upon_creation=True,
     max_active_runs=1,
     tags=["mew", "scada", "microbatch", "bqml", "dataform"],
 ) as dag:
 
-    # Step 1: Compile Dataform repository with unified dataset & customer raw table names
+    # Step 1: Compile Dataform repository (from GitHub branch if configured, else workspace)
+    _compilation_source = (
+        {"git_commitish": DATAFORM_GIT_COMMITISH}
+        if DATAFORM_GIT_COMMITISH
+        else {
+            "workspace": (
+                f"projects/{PROJECT_ID_JINJA}/locations/{LOCATION_JINJA}/"
+                f"repositories/{DATAFORM_REPO_JINJA}/workspaces/{DATAFORM_WORKSPACE_JINJA}"
+            )
+        }
+    )
+
     compile_dataform = DataformCreateCompilationResultOperator(
         task_id="compile_dataform_repository",
         project_id=PROJECT_ID_JINJA,
         region=LOCATION_JINJA,
         repository_id=DATAFORM_REPO_JINJA,
         compilation_result={
-            "git_commitish": "main",
+            **_compilation_source,
             "code_compilation_config": {
                 "default_database": PROJECT_ID_JINJA,
                 "default_schema": DATASET_JINJA,
