@@ -9,7 +9,22 @@ set -euo pipefail
 unset CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE GOOGLE_API_CERTIFICATE_CONFIG CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ID="${GCP_PROJECT_ID:-electric-load-demo}"
+
+# Load hidden environment variables from .env (repo root or data_app/) if present
+for ENV_FILE in "${SCRIPT_DIR}/../.env" "${SCRIPT_DIR}/.env"; do
+    if [[ -f "${ENV_FILE}" ]]; then
+        set -a
+        # shellcheck disable=SC1090
+        source "${ENV_FILE}"
+        set +a
+    fi
+done
+
+PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
+if [[ -z "${PROJECT_ID}" ]]; then
+    echo "ERROR: GCP_PROJECT_ID is not set. Define it in .env or run 'gcloud config set project <PROJECT_ID>'." >&2
+    exit 1
+fi
 REGION="${GCP_LOCATION:-europe-west4}"
 DATASET_ID="${DATASET_NAME:-${DATASET_ID:-mew_analytics}}"
 SERVICE_NAME="${SERVICE_NAME:-mew-scada-intelligence-hub}"
@@ -102,7 +117,7 @@ gcloud run deploy "${SERVICE_NAME}" \
     --min-instances=0 \
     --max-instances=10 \
     --concurrency=80 \
-    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID}" \
+    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_PROJECT_NUMBER=${PROJECT_NUMBER},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID},BIGQUERY_DATA_AGENT_ID=${BIGQUERY_DATA_AGENT_ID:-},BIGQUERY_DATA_AGENT_LOCATION=${BIGQUERY_DATA_AGENT_LOCATION:-eu}" \
     --allow-unauthenticated \
     --quiet || \
 gcloud beta run deploy "${SERVICE_NAME}" \
@@ -116,7 +131,7 @@ gcloud beta run deploy "${SERVICE_NAME}" \
     --min-instances=0 \
     --max-instances=10 \
     --concurrency=80 \
-    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID}" \
+    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_PROJECT_NUMBER=${PROJECT_NUMBER},GCP_LOCATION=${REGION},DATASET_ID=${DATASET_ID},GOLD_DATASET=${DATASET_ID},BIGQUERY_DATA_AGENT_ID=${BIGQUERY_DATA_AGENT_ID:-},BIGQUERY_DATA_AGENT_LOCATION=${BIGQUERY_DATA_AGENT_LOCATION:-eu}" \
     --iap \
     --quiet
 

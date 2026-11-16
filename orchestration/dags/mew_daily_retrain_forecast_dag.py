@@ -16,7 +16,8 @@ except ImportError:
     from airflow.models.dag import DAG
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
-DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_ID", "electric-load-demo"))
+DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_ID", ""))
+DEFAULT_DAG_ID = os.environ.get("AIRFLOW_DAILY_DAG_ID", "mew_daily_retrain_forecast_dag")
 DEFAULT_LOCATION = os.environ.get("GCP_LOCATION", "europe-west4")
 DEFAULT_DATASET = os.environ.get("BQ_DATASET", "mew_analytics")
 
@@ -32,7 +33,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="mew_daily_retrain_forecast_dag",
+    dag_id=DEFAULT_DAG_ID,
     description="Daily BQML Retraining (ARIMA_PLUS & Boosted Tree Regressor) and 30-Day Forecast Archival",
     default_args=default_args,
     schedule="0 22 * * *",  # 01:00 AM Asia/Kuwait (UTC+3)

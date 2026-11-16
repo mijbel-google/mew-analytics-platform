@@ -16,6 +16,9 @@ package-lock.json
 
 # Environment & Secrets
 .env
+.env.*
+!.env.example
+mew-env.conf
 *.local.conf
 dev-argolis.conf
 service-account*.json

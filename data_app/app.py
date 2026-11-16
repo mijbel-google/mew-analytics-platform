@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "electric-load-demo")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 LOCATION = os.getenv("GCP_LOCATION", "europe-west4")
 DATASET_ID = os.getenv("DATASET_ID", os.getenv("GOLD_DATASET", "mew_analytics"))
 

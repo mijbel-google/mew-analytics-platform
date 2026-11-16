@@ -18,7 +18,18 @@ set -euo pipefail
 unset CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE GOOGLE_API_CERTIFICATE_CONFIG CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_ID="${GCP_PROJECT_ID:-electric-load-demo}"
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${REPO_ROOT}/.env"
+    set +a
+fi
+
+PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
+if [[ -z "${PROJECT_ID}" ]]; then
+    echo "ERROR: GCP_PROJECT_ID is not set. Define it in .env or run 'gcloud config set project <PROJECT_ID>'." >&2
+    exit 1
+fi
 REGION="${GCP_LOCATION:-europe-west4}"
 DATAFORM_REPO="${DATAFORM_REPO:-mew-grid-pipeline}"
 COMPOSER_ENV_NAME="${COMPOSER_ENV_NAME:-mew-airflow-env}"

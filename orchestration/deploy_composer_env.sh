@@ -8,7 +8,19 @@ set -euo pipefail
 # Clean certificate environment variables for BigQuery CLI compatibility
 unset CLOUDSDK_CONTEXT_AWARE_USE_CLIENT_CERTIFICATE GOOGLE_API_CERTIFICATE_CONFIG CLOUDSDK_CONTEXT_AWARE_CERTIFICATE_CONFIG_FILE_PATH
 
-PROJECT_ID="${GCP_PROJECT_ID:-electric-load-demo}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/../.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/../.env"
+    set +a
+fi
+
+PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
+if [[ -z "${PROJECT_ID}" ]]; then
+    echo "ERROR: GCP_PROJECT_ID is not set. Define it in .env or run 'gcloud config set project <PROJECT_ID>'." >&2
+    exit 1
+fi
 REGION="${GCP_LOCATION:-europe-west4}"
 COMPOSER_ENV_NAME="${COMPOSER_ENV_NAME:-mew-airflow-env}"
 COMPOSER_IMAGE_VERSION="${COMPOSER_IMAGE_VERSION:-composer-3-airflow-3}"

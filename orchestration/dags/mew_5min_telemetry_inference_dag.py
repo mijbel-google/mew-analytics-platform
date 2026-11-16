@@ -24,7 +24,8 @@ from airflow.providers.google.cloud.operators.dataform import (
 )
 
 # Environment defaults (overridable via Airflow Variables at runtime without top-level DB calls)
-DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_ID", "electric-load-demo"))
+DEFAULT_PROJECT_ID = os.environ.get("GCP_PROJECT", os.environ.get("GCP_PROJECT_ID", ""))
+DEFAULT_DAG_ID = os.environ.get("AIRFLOW_5MIN_DAG_ID", "mew_5min_telemetry_inference_dag")
 DEFAULT_LOCATION = os.environ.get("GCP_LOCATION", "europe-west4")
 DEFAULT_DATASET = os.environ.get("BQ_DATASET", "mew_analytics")
 DEFAULT_DATAFORM_REPO = os.environ.get("DATAFORM_REPOSITORY", "mew-grid-pipeline")
@@ -87,7 +88,7 @@ def check_and_publish_grid_alerts(
     )
     payload = json.dumps(
         {
-            "source": "mew_5min_telemetry_inference_dag",
+            "source": DEFAULT_DAG_ID,
             "alert_count": len(rows),
             "alerts": rows,
         }
@@ -111,7 +112,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="mew_5min_telemetry_inference_dag",
+    dag_id=DEFAULT_DAG_ID,
     description="5-Minute SCADA Telemetry ELT (Dataform) + BQML Real-Time Anomaly Detection & Alerting",
     default_args=default_args,
     schedule="*/5 * * * *",

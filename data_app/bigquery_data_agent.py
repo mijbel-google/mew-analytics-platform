@@ -21,20 +21,24 @@ except ImportError:
     genai = None
     genai_types = None
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "electric-load-demo")
-PROJECT_NUMBER = os.getenv("GCP_PROJECT_NUMBER", "928308690350")
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
+PROJECT_NUMBER = os.getenv("GCP_PROJECT_NUMBER", "")
 LOCATION = os.getenv("GCP_LOCATION", "europe-west4")
 DATASET_ID = os.getenv("DATASET_ID", os.getenv("GOLD_DATASET", "mew_analytics"))
 
-# KEI Agent (Kuwait Energy Intelligence Agent) - Native BigQuery Agent
-KEI_AGENT_ID = os.getenv("BIGQUERY_DATA_AGENT_ID", "agent_af15e9f3-80de-406e-9a7a-27edfa795b3f")
+# KEI Agent (Kuwait Energy Intelligence Agent) - Native BigQuery Agent (configured via env vars)
+KEI_AGENT_ID = os.getenv("BIGQUERY_DATA_AGENT_ID", "")
 KEI_AGENT_LOCATION = os.getenv("BIGQUERY_DATA_AGENT_LOCATION", "eu")
 KEI_AGENT_URN = (
     f"urn:agent:projects-{PROJECT_NUMBER}:projects:{PROJECT_NUMBER}:"
     f"locations:{KEI_AGENT_LOCATION}:geminidataanalytics:dataAgents:{KEI_AGENT_ID}"
+    if PROJECT_NUMBER and KEI_AGENT_ID
+    else ""
 )
 KEI_AGENT_RESOURCE_NAME = (
     f"projects/{PROJECT_NUMBER}/locations/{KEI_AGENT_LOCATION}/dataAgents/{KEI_AGENT_ID}"
+    if PROJECT_NUMBER and KEI_AGENT_ID
+    else ""
 )
 
 # Strict Gold Layer Schema Reference
@@ -84,7 +88,8 @@ def _load_agent_context() -> str:
             break
 
     combined = f"{sys_inst}\n\nGOLDEN QUERIES REFERENCE (GOLD VIEWS ONLY):\n{golden_sql}"
-    combined = combined.replace("electric-load-demo", PROJECT_ID)
+    if PROJECT_ID:
+        combined = combined.replace("electric-load-demo", PROJECT_ID)
     combined = combined.replace(".gold.", f".{DATASET_ID}.")
     combined = combined.replace(".mew_analytics.", f".{DATASET_ID}.")
     return combined
@@ -259,9 +264,9 @@ def render_conversational_agent_tab():
     with st.expander("تفاصيل التسجيل وهوية الوكيل (Agent Registry & Gold Scope)"):
         st.code(
             f"Agent Name:    KEI Agent (Kuwait Energy Intelligence Agent)\n"
-            f"Agent ID:      {KEI_AGENT_ID}\n"
-            f"Agent URN:     {KEI_AGENT_URN}\n"
-            f"Resource:      {KEI_AGENT_RESOURCE_NAME}\n"
+            f"Agent ID:      {KEI_AGENT_ID or 'Not configured (Gemini SQL fallback active)'}\n"
+            f"Agent URN:     {KEI_AGENT_URN or 'N/A'}\n"
+            f"Resource:      {KEI_AGENT_RESOURCE_NAME or 'N/A'}\n"
             f"Agent Region:  {KEI_AGENT_LOCATION}\n"
             f"Target Gold:   {PROJECT_ID}.{DATASET_ID}\n"
             f"Allowed Views: realtime_scada_stream_v, hourly_load, daily_load, forecast_30d, forecast_explain_30d, realtime_active_alerts",
@@ -296,7 +301,7 @@ def render_conversational_agent_tab():
             client = get_data_agent_client()
 
             with st.spinner("جاري التواصل مع KEI Agent واسترجاع مؤشرات الطبقة الذهبية..."):
-                if client is not None:
+                if client is not None and KEI_AGENT_ID and PROJECT_NUMBER:
                     try:
                         # Call DataChatServiceClient targeting the EU native KEI Agent
                         request = geminidataanalytics.ChatRequest(

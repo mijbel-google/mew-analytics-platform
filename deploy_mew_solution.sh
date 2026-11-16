@@ -90,14 +90,23 @@ if [[ "${ACCEPT_NON_PROD_DISCLAIMER}" != "true" ]]; then
     fi
 fi
 
+# Load hidden .env if present (overrides defaults without committing secrets/IDs to GitHub)
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/.env"
+    set +a
+fi
+
 # =============================================================================
 # 2. INTERACTIVE PROMPTS (WHEN NO CONFIG FILE IS SUPPLIED)
 # =============================================================================
 if [[ -z "${CONFIG_FILE}" ]]; then
+    DEFAULT_GCLOUD_PROJECT="$(gcloud config get-value project 2>/dev/null || true)"
     echo ""
     echo "==> Please enter your GCP & BigQuery environment parameters:"
-    read -r -p "1. GCP Project ID [electric-load-demo]: " INPUT_PROJECT
-    GCP_PROJECT_ID="${INPUT_PROJECT:-electric-load-demo}"
+    read -r -p "1. GCP Project ID [${DEFAULT_GCLOUD_PROJECT:-required}]: " INPUT_PROJECT
+    GCP_PROJECT_ID="${INPUT_PROJECT:-${GCP_PROJECT_ID:-${DEFAULT_GCLOUD_PROJECT}}}"
 
     read -r -p "2. GCP Region [europe-west4]: " INPUT_REGION
     GCP_LOCATION="${INPUT_REGION:-europe-west4}"
@@ -131,7 +140,11 @@ if [[ -z "${CONFIG_FILE}" ]]; then
 fi
 
 # Apply defaults for any unset variables
-export GCP_PROJECT_ID="${GCP_PROJECT_ID:-electric-load-demo}"
+export GCP_PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
+if [[ -z "${GCP_PROJECT_ID}" ]]; then
+    echo "ERROR: GCP_PROJECT_ID is not set. Define it in .env, pass --config, or set gcloud default project." >&2
+    exit 1
+fi
 export GCP_LOCATION="${GCP_LOCATION:-europe-west4}"
 export DATASET_NAME="${DATASET_NAME:-mew_analytics}"
 export RAW_POWER_STAT_TABLE="${RAW_POWER_STAT_TABLE:-POWER_STAT}"

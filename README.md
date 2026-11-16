@@ -347,7 +347,7 @@ Native BigQuery Data Agents (`geminidataanalytics`) are provisioned in the BigQu
    - **System Instructions**: Paste the full contents of [`data_agent/system_instructions.txt`](file:///home/mijbel/Projects/MEW/data_agent/system_instructions.txt), and explicitly note: *"Only query Gold views and tables in `<GCP_PROJECT_ID>.<DATASET_NAME>`."*
    - **Golden Queries / Verified Examples**: Add representative queries from [`data_agent/golden_queries_catalog.sql`](file:///home/mijbel/Projects/MEW/data_agent/golden_queries_catalog.sql).
 4. **Publish & Copy the Agent Registry Identifier**:
-   - Once created, copy the **Agent ID** (e.g., `agent_af15e9f3-80de-406e-9a7a-27edfa795b3f`) and **Location** (e.g., `eu`) from the Agent Details / Registry URN:
+   - Once created, copy the **Agent ID** (e.g., `agent_<YOUR_AGENT_ID>`) and **Location** (e.g., `eu`) from the Agent Details / Registry URN:
      `urn:agent:projects-<PROJECT_NUMBER>:projects:<PROJECT_NUMBER>:locations:<AGENT_LOCATION>:geminidataanalytics:dataAgents:<AGENT_ID>`
 5. **Authorize the App Service Account**:
    Ensure `mew-pipeline-sa@<GCP_PROJECT_ID>.iam.gserviceaccount.com` has `roles/aiplatform.user` and `roles/geminidataanalytics.dataAgentUser` (or `roles/geminidataanalytics.dataAgentStatelessUser`) on the project.
@@ -392,8 +392,8 @@ You can securely access the deployed application using either of the two methods
 ### Method 1: Direct Browser Sign-In via Identity-Aware Proxy (IAP)
 The deployment script enables **Cloud Run Native IAP (`--iap`)** and grants `roles/iap.httpsResourceAccessor` and `roles/run.invoker` to the deployer account:
 1. Open the Cloud Run URL directly in your browser:
-   `https://mew-scada-intelligence-hub-928308690350.europe-west4.run.app`
-2. Sign in with your authorized Google Cloud / Workspace account (e.g., `admin@mijbel.altostrat.com`).
+   `https://mew-scada-intelligence-hub-<PROJECT_NUMBER>.europe-west4.run.app`
+2. Sign in with your authorized Google Cloud / Workspace account (e.g., `engineer@your-domain.com`).
 3. To authorize additional MEW engineers for browser access:
    ```bash
    gcloud projects add-iam-policy-binding <GCP_PROJECT_ID> \
