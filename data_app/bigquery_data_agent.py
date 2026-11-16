@@ -27,8 +27,8 @@ LOCATION = os.getenv("GCP_LOCATION", "europe-west4")
 DATASET_ID = os.getenv("DATASET_ID", os.getenv("GOLD_DATASET", "mew_analytics"))
 
 # KEI Agent (Kuwait Energy Intelligence Agent) - Native BigQuery Agent
-KEI_AGENT_ID = "agent_af15e9f3-80de-406e-9a7a-27edfa795b3f"
-KEI_AGENT_LOCATION = "eu"
+KEI_AGENT_ID = os.getenv("BIGQUERY_DATA_AGENT_ID", "agent_af15e9f3-80de-406e-9a7a-27edfa795b3f")
+KEI_AGENT_LOCATION = os.getenv("BIGQUERY_DATA_AGENT_LOCATION", "eu")
 KEI_AGENT_URN = (
     f"urn:agent:projects-{PROJECT_NUMBER}:projects:{PROJECT_NUMBER}:"
     f"locations:{KEI_AGENT_LOCATION}:geminidataanalytics:dataAgents:{KEI_AGENT_ID}"
@@ -96,7 +96,12 @@ def get_data_agent_client():
         return None
     try:
         if ClientOptions is not None:
-            client_options = ClientOptions(api_endpoint="eu-geminidataanalytics.googleapis.com")
+            endpoint = (
+                "geminidataanalytics.googleapis.com"
+                if KEI_AGENT_LOCATION == "global"
+                else f"{KEI_AGENT_LOCATION}-geminidataanalytics.googleapis.com"
+            )
+            client_options = ClientOptions(api_endpoint=endpoint)
             return geminidataanalytics.DataChatServiceClient(client_options=client_options)
         return geminidataanalytics.DataChatServiceClient()
     except Exception:
