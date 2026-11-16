@@ -234,26 +234,58 @@ The script will interactively:
 
 ---
 
-### Step 3 (Manual — Option A via Cloud Console): Create & Connect the Dataform Repository
+### Step 3 (Manual — Option A via Cloud Console): Create & Connect the Dataform Repository (Least Privilege)
 
 > **Why this manual step is required**:  
-> `deploy_mew_solution.sh` parameterizes the local `dataform/workflow_settings.yaml` file and materializes Silver/Gold tables directly via BigQuery SQL (`materialize_medallion_tables.sql`), but it does **not** automatically create the remote Dataform repository resource in GCP. Creating the repository in the Cloud Console is required so that Managed Airflow (`mew_5min_telemetry_inference_dag`) can trigger `DataformCreateCompilationResultOperator` and `DataformCreateWorkflowInvocationOperator`.
+> `deploy_mew_solution.sh` parameterizes the local `dataform/workflow_settings.yaml` file and materializes Silver/Gold tables directly via BigQuery SQL (`materialize_medallion_tables.sql`), but it does **not** automatically create the remote Dataform repository resource in GCP. Creating and connecting the repository in the Cloud Console is required so that Managed Airflow (`mew_5min_telemetry_inference_dag`) can trigger `DataformCreateCompilationResultOperator` and `DataformCreateWorkflowInvocationOperator`.
+>
+> **Note on Managed Airflow vs. Dataform GitHub Access**:  
+> Managed Airflow (Cloud Composer 3) does **NOT** need to be connected to GitHub or hold a GitHub token. Airflow reads its DAG Python files from its Cloud Storage DAGs bucket (synced by `sync_dags.sh`), and calls the Dataform API; Dataform itself pulls from GitHub using Secret Manager.
 
-Follow **Option A (Google Cloud Console)**:
+#### 3.1 Create the Dataform Repository in Cloud Console
 1. Open the **[Google Cloud Console — BigQuery Dataform](https://console.cloud.google.com/bigquery/dataform?project=electric-load-demo)** page.
 2. Ensure your target project (e.g., `electric-load-demo`) is selected in the top bar.
 3. Click **+ Create repository**:
    - **Repository ID**: `mew-grid-pipeline` *(must match `DATAFORM_REPO` in `mew-env.conf` / Airflow variable `dataform_repository`)*.
    - **Region**: `europe-west4` *(must match `GCP_LOCATION`)*.
    - Click **Create**.
-4. **Grant Permissions to the Dataform Service Account**:
-   - Inside your new Dataform repository, note the Dataform Service Agent displayed (`service-<PROJECT_NUMBER>@gcp-sa-dataform.iam.gserviceaccount.com`).
-   - Grant it **`roles/bigquery.admin`** on your project (`IAM & Admin → IAM → Grant Access`), plus **`roles/secretmanager.secretAccessor`** if connecting to a private Git repository.
-5. **Connect GitHub or Initialize a Workspace**:
-   - Open the repository → **Settings → Git Connection Settings → Connect with HTTPS**.
+4. **Grant BigQuery Permissions to the Dataform Service Account**:
+   - Inside your new Dataform repository, note the Dataform Service Agent (`service-<PROJECT_NUMBER>@gcp-sa-dataform.iam.gserviceaccount.com`).
+   - In **IAM & Admin → IAM**, grant it **`roles/bigquery.admin`** on your project so Dataform can compile and materialize Silver/Gold tables and assertions.
+
+#### 3.2 Create a Least-Privilege GitHub Fine-Grained Personal Access Token (PAT)
+Use a **Fine-grained token** scoped to a single repository rather than a Classic PAT:
+1. Go to **GitHub → Profile Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Configure:
+   - **Token name**: `gcp-dataform-mew-grid-pipeline`
+   - **Expiration**: Bounded (e.g., `90 days`).
+   - **Resource owner**: Your GitHub user/organization (e.g., `mijbel-google`).
+3. Under **Repository access**, select **Only select repositories** → **`mew-analytics-platform`**.
+4. Under **Permissions → Repository permissions**:
+   - **Strictest Read-Only** *(if Dataform only compiles & runs from GitHub)*: **Contents** = **Read-only**, **Metadata** = **Read-only**.
+   - **Read/Write** *(if you also commit/push from Dataform Workspaces)*: **Contents** = **Read and write**, **Metadata** = **Read-only**.
+   - Leave all other permissions as **No access**.
+5. Click **Generate token** and copy the `github_pat_...` value.
+
+#### 3.3 Store the Token in Secret Manager (Secret-Level IAM Only)
+1. Open **[Google Cloud Console — Security → Secret Manager](https://console.cloud.google.com/security/secret-manager?project=electric-load-demo)** *(enable `secretmanager.googleapis.com` if prompted)*.
+2. Click **+ Create Secret**:
+   - **Name**: `dataform-github-mew-pat`
+   - **Secret value**: Paste your `github_pat_...` token.
+   - Click **Create secret**.
+3. Grant access **on this specific secret only** (not project-wide):
+   - Open `dataform-github-mew-pat` → **Permissions** tab → **+ Grant access**.
+   - **New principals**: `service-<PROJECT_NUMBER>@gcp-sa-dataform.iam.gserviceaccount.com`
+   - **Role**: **`Secret Manager Secret Accessor`** (`roles/secretmanager.secretAccessor`)
+   - Click **Save**.
+
+#### 3.4 Link GitHub in Dataform Console
+1. Open your Dataform repository (`mew-grid-pipeline`) → **Settings → Git connection → Connect with HTTPS**.
+2. Enter:
    - **Remote Git repository URL**: `https://github.com/mijbel-google/mew-analytics-platform.git` *(or your organization's fork)*.
-   - **Default branch name**: `main`.
-   - Authenticate using a GitHub Personal Access Token stored in **Secret Manager** (or click **Create Development Workspace** and upload the contents of `dataform/` directly if operating air-gapped from GitHub).
+   - **Default branch name**: `main` *(or a dedicated `dataform` subtree branch where `workflow_settings.yaml` sits at branch root)*.
+   - **Secret**: `dataform-github-mew-pat` (latest version).
+3. Click **Save** and confirm the connection status shows **Connected**. *(If operating air-gapped without GitHub, click **Create Development Workspace** and upload the contents of `dataform/` directly.)*
 
 ---
 
