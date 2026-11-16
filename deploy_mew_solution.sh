@@ -278,7 +278,7 @@ cat > "${SCRIPT_DIR}/dataform/workflow_settings.yaml" <<EOF
 defaultProject: "${GCP_PROJECT_ID}"
 defaultLocation: "${GCP_LOCATION}"
 defaultDataset: "${DATASET_NAME}"
-assertionDataset: "${DATASET_NAME}"
+defaultAssertionDataset: "${DATASET_NAME}"
 dataformCoreVersion: "3.0.0"
 
 vars:

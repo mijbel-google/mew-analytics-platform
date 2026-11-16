@@ -1,7 +1,7 @@
 defaultProject: "electric-load-demo"
 defaultLocation: "europe-west4"
 defaultDataset: "mew_analytics"
-assertionDataset: "mew_analytics"
+defaultAssertionDataset: "mew_analytics"
 dataformCoreVersion: "3.0.0"
 
 vars:
