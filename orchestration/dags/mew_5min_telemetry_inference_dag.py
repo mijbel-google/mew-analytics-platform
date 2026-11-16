@@ -174,7 +174,7 @@ with DAG(
     execute_realtime_inference = BigQueryInsertJobOperator(
         task_id="execute_realtime_inference",
         project_id=PROJECT_ID_JINJA,
-        location=LOCATION_JINJA,
+        location=DEFAULT_LOCATION,
         configuration={
             "query": {
                 "query": f"CALL `{PROJECT_ID_JINJA}.{DATASET_JINJA}.sp_run_realtime_inference_and_alerts`();",

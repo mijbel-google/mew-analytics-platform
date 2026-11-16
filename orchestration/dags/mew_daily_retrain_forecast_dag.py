@@ -45,7 +45,7 @@ with DAG(
     execute_retraining_and_archive = BigQueryInsertJobOperator(
         task_id="execute_retraining_and_archive",
         project_id=PROJECT_ID_JINJA,
-        location=LOCATION_JINJA,
+        location=DEFAULT_LOCATION,
         configuration={
             "query": {
                 "query": f"CALL `{PROJECT_ID_JINJA}.{DATASET_JINJA}.sp_daily_model_retrain_and_archive`();",
@@ -57,7 +57,7 @@ with DAG(
     verify_forecast_freshness = BigQueryInsertJobOperator(
         task_id="verify_forecast_freshness",
         project_id=PROJECT_ID_JINJA,
-        location=LOCATION_JINJA,
+        location=DEFAULT_LOCATION,
         configuration={
             "query": {
                 "query": f"""
