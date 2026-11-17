@@ -34,7 +34,7 @@ default_args = {
 
 with DAG(
     dag_id=DEFAULT_DAG_ID,
-    description="Daily BQML Retraining (ARIMA_PLUS & Boosted Tree Regressor) and 30-Day Forecast Archival",
+    description="Daily BQML Retraining (Daily & Hourly ARIMA_PLUS + Boosted Tree Regressor) and 30-Day / 24-Hour Forecast Refresh",
     default_args=default_args,
     schedule="0 22 * * *",  # 01:00 AM Asia/Kuwait (UTC+3)
     start_date=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
@@ -66,6 +66,10 @@ with DAG(
                         SELECT COUNT(1)
                         FROM `{PROJECT_ID_JINJA}.{DATASET_JINJA}.forecast_30d`
                     ) >= 30 AS 'Expected at least 30 daily forecast rows in forecast_30d view';
+                    ASSERT (
+                        SELECT COUNT(1)
+                        FROM `{PROJECT_ID_JINJA}.{DATASET_JINJA}.forecast_24h`
+                    ) >= 24 AS 'Expected at least 24 hourly forecast rows in forecast_24h view';
                 """,
                 "useLegacySql": False,
             }
