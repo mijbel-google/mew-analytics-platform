@@ -243,25 +243,44 @@ def _run_gemini_bigquery_fallback(prompt: str) -> str:
     )
 
 
-def render_conversational_agent_tab():
+def render_conversational_agent_tab(telemetry_summary: dict | None = None):
+    cap_mw = float((telemetry_summary or {}).get("available_capacity_mw", 10411.0))
+    load_mw = float((telemetry_summary or {}).get("current_load_mw", 7289.0))
+    registry_status = "Active" if (KEI_AGENT_ID and PROJECT_NUMBER) else "Gemini SQL Fallback"
+
     st.markdown(
-        """
-        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 14px;">
+        f"""
+        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:16px;">
             <div>
-                <h3 style="margin: 0; font-weight: 800; color: #0f172a;">⚡ وكيل الذكاء الاصطناعي لطاقة الكويت (KEI Agent)</h3>
-                <div style="font-size: 0.92rem; color: #475569; font-weight: 600;">
-                    Kuwait Energy Intelligence Agent &bull; متصل مباشرة بجداول وعروض الطبقة الذهبية (Gold Layer Only)
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 style="margin:0; font-family:'Red Hat Display',sans-serif; font-weight:700; color:#0f172a; font-size:1.5rem;">Kuwait Energy Index Agent</h2>
+                    <span style="font-size:0.72rem; padding:2px 8px; border-radius:4px; background:#f1f5f9; color:#334155; font-family:'Spline Sans Mono',monospace; font-weight:600;">Gemini + BQML RAG</span>
+                </div>
+                <div style="font-size:0.86rem; color:#64748b; margin-top:2px;">
+                    Autonomous analytical copilot for MEW power grid operations, Gold Layer views, and GCC interconnection.
                 </div>
             </div>
-            <div style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-family: monospace; font-size: 0.8rem; color: #0f172a;">
-                Agent Registry: <b>Active</b>
+            <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:4px 10px; font-family:'Spline Sans Mono',monospace; font-size:0.78rem; color:#0f172a;">
+                Agent Registry: <b>{registry_status}</b>
+            </div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0f172a 0%,#0A192F 100%); color:white; border-radius:8px; padding:20px 24px; border:1px solid #1e293b; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+                <span style="background:rgba(0,168,150,0.2); border:1px solid rgba(0,168,150,0.45); color:#5eead4; font-family:'Spline Sans Mono',monospace; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px;">SYSTEM INITIALIZED</span>
+                <span style="color:#94a3b8; font-family:'Spline Sans Mono',monospace; font-size:0.75rem;">Telemetry Stream: Synchronized ({cap_mw:,.0f} MW Capacity / {load_mw:,.0f} MW Load)</span>
+            </div>
+            <div style="font-family:'Red Hat Display',sans-serif; font-weight:700; font-size:1.15rem; margin-bottom:6px;">
+                Welcome to the MEW Kuwait Energy Conversational Agent
+            </div>
+            <div style="color:#cbd5e1; font-size:0.88rem; line-height:1.5;">
+                Analyze instantaneous power balances, query BQML 30-day &amp; 24-hour forecasts, correlate weather impacts, and verify GCC interconnection commitments (Gold Layer Only).
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    with st.expander("تفاصيل التسجيل وهوية الوكيل (Agent Registry & Gold Scope)"):
+    with st.expander("Agent Registry & Gold Layer Scope"):
         st.code(
             f"Agent Name:    KEI Agent (Kuwait Energy Intelligence Agent)\n"
             f"Agent ID:      {KEI_AGENT_ID or 'Not configured (Gemini SQL fallback active)'}\n"
@@ -269,7 +288,7 @@ def render_conversational_agent_tab():
             f"Resource:      {KEI_AGENT_RESOURCE_NAME or 'N/A'}\n"
             f"Agent Region:  {KEI_AGENT_LOCATION}\n"
             f"Target Gold:   {PROJECT_ID}.{DATASET_ID}\n"
-            f"Allowed Views: realtime_scada_stream_v, hourly_load, daily_load, forecast_30d, forecast_explain_30d, realtime_active_alerts",
+            f"Allowed Views: realtime_scada_stream_v, hourly_load, daily_load, forecast_30d, forecast_24h, forecast_explain_30d, realtime_active_alerts",
             language="yaml",
         )
 
@@ -280,17 +299,41 @@ def render_conversational_agent_tab():
                 "content": (
                     "مرحباً بكم في مركز التحكم الوطني لوزارة الكهرباء والماء والطاقة المتجددة.\n\n"
                     "أنا **وكيل الذكاء الاصطناعي لطاقة الكويت (KEI Agent)** المعتمد في سجل الوكلاء (Agent Registry). "
-                    "أنا مقيد حصرياً بالاستعلام من **جداول وعروض الطبقة الذهبية (Gold Layer)** لدعم اتخاذ القرار بدقة وموثوقية عالية.\n\n"
+                    "أنا مقيد حصرياً بالاستعلام من **جداول وعروض الطبقة الذهبية (Gold Layer)**.\n\n"
                     "يمكنك سؤالي عن ميزان الأحمال اللحظي، القدرة المتوفرة، توقعات الذروة لـ 30 يوماً، أو أثر درجات الحرارة على الشبكة."
                 ),
             }
         ]
 
+    # Quick-start sample queries (2 in Arabic, 1 in English)
+    q_cols = st.columns(3)
+    starter_prompts = [
+        (
+            "⚡ تحليل ميزان الأحمال والقدرة",
+            "ما هو ميزان الأحمال والقدرة المتوفرة حالياً، وما هو هامش الاحتياطي وحالة التشغيل للشبكة؟",
+        ),
+        (
+            "📈 توقعات الذروة لـ 30 يوماً",
+            "ما هي أعلى أحمال ذروة متوقعة خلال الـ 30 يوماً القادمة، وما هي الأيام الأكثر خطورة؟",
+        ),
+        (
+            "🔌 GCC Link Commitment Status",
+            "Are we fulfilling our GCC interconnection reserve obligation under current net generation and load exchange?",
+        ),
+    ]
+    selected_quick_prompt = None
+    for idx, (label, q_text) in enumerate(starter_prompts):
+        with q_cols[idx]:
+            if st.button(label, help=q_text, key=f"kei_quick_{idx}", use_container_width=True):
+                selected_quick_prompt = q_text
+
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    if prompt := st.chat_input("اكتب استفسارك لوكيل طاقة الكويت (مثال: ما هو ميزان الأحمال الحالي وتوقعات الذروة للأسبوع القادم؟)"):
+    typed_prompt = st.chat_input("Ask Kuwait Energy Index Agent about forecasts, GCC obligations, or historical correlations...")
+    prompt = selected_quick_prompt or typed_prompt
+    if prompt:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)

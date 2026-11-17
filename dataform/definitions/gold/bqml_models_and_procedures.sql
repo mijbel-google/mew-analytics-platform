@@ -69,6 +69,26 @@ SELECT day_ts, peak_load_mw
 FROM `electric-load-demo.mew_analytics.daily_load`
 WHERE day_ts IS NOT NULL AND peak_load_mw IS NOT NULL;
 
+CREATE OR REPLACE MODEL `electric-load-demo.mew_analytics.hourly_peak_forecast_model`
+OPTIONS (
+  model_type = 'ARIMA_PLUS',
+  time_series_timestamp_col = 'hour_ts',
+  time_series_data_col = 'avg_load_mw',
+  data_frequency = 'HOURLY',
+  holiday_region = 'EMEA',
+  auto_arima = TRUE
+) AS
+SELECT hour_ts, avg_load_mw
+FROM `electric-load-demo.mew_analytics.hourly_load`
+WHERE hour_ts IS NOT NULL AND avg_load_mw IS NOT NULL;
+
+CREATE OR REPLACE VIEW `electric-load-demo.mew_analytics.forecast_24h` AS
+SELECT *
+FROM ML.FORECAST(
+  MODEL `electric-load-demo.mew_analytics.hourly_peak_forecast_model`,
+  STRUCT(24 AS horizon, 0.85 AS confidence_level)
+);
+
 CREATE OR REPLACE MODEL `electric-load-demo.mew_analytics.load_regression_model`
 OPTIONS (
   model_type = 'BOOSTED_TREE_REGRESSOR',
@@ -104,6 +124,20 @@ BEGIN
   SELECT day_ts, peak_load_mw
   FROM `electric-load-demo.mew_analytics.daily_load`
   WHERE day_ts IS NOT NULL AND peak_load_mw IS NOT NULL;
+
+  -- Retrain Hourly ARIMA_PLUS Model (24h Horizon)
+  CREATE OR REPLACE MODEL `electric-load-demo.mew_analytics.hourly_peak_forecast_model`
+  OPTIONS (
+    model_type = 'ARIMA_PLUS',
+    time_series_timestamp_col = 'hour_ts',
+    time_series_data_col = 'avg_load_mw',
+    data_frequency = 'HOURLY',
+    holiday_region = 'EMEA',
+    auto_arima = TRUE
+  ) AS
+  SELECT hour_ts, avg_load_mw
+  FROM `electric-load-demo.mew_analytics.hourly_load`
+  WHERE hour_ts IS NOT NULL AND avg_load_mw IS NOT NULL;
 
   -- Retrain Boosted Tree Regressor (Idempotent CREATE OR REPLACE MODEL)
   CREATE OR REPLACE MODEL `electric-load-demo.mew_analytics.load_regression_model`
