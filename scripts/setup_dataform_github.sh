@@ -87,12 +87,20 @@ if gcloud composer environments describe "${COMPOSER_ENV_NAME}" \
     --location="${REGION}" \
     --project="${PROJECT_ID}" \
     --quiet >/dev/null 2>&1; then
-    gcloud composer environments update "${COMPOSER_ENV_NAME}" \
+    CURRENT_COMMITISH="$(gcloud composer environments describe "${COMPOSER_ENV_NAME}" \
         --location="${REGION}" \
         --project="${PROJECT_ID}" \
-        --update-env-variables="DATAFORM_GIT_COMMITISH=${DATAFORM_BRANCH}" \
-        --quiet
-    echo "    Managed Airflow updated with DATAFORM_GIT_COMMITISH=${DATAFORM_BRANCH}."
+        --format="value(config.softwareConfig.envVariables.DATAFORM_GIT_COMMITISH)" 2>/dev/null || true)"
+    if [[ "${CURRENT_COMMITISH}" == "${DATAFORM_BRANCH}" ]]; then
+        echo "    Managed Airflow already has DATAFORM_GIT_COMMITISH=${DATAFORM_BRANCH}. No update needed."
+    else
+        gcloud composer environments update "${COMPOSER_ENV_NAME}" \
+            --location="${REGION}" \
+            --project="${PROJECT_ID}" \
+            --update-env-variables="DATAFORM_GIT_COMMITISH=${DATAFORM_BRANCH}" \
+            --quiet
+        echo "    Managed Airflow updated with DATAFORM_GIT_COMMITISH=${DATAFORM_BRANCH}."
+    fi
 else
     echo "    Composer environment '${COMPOSER_ENV_NAME}' not found in '${REGION}'. Skipping."
 fi
