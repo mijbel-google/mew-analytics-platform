@@ -191,6 +191,13 @@ BEGIN
   WHERE forecast_execution_time = (
       SELECT MAX(forecast_execution_time) FROM `electric-load-demo.mew_analytics.forecast_explain_30d_history`
   );
+
+  CREATE OR REPLACE VIEW `electric-load-demo.mew_analytics.forecast_24h` AS
+  SELECT *
+  FROM ML.FORECAST(
+    MODEL `electric-load-demo.mew_analytics.hourly_peak_forecast_model`,
+    STRUCT(24 AS horizon, 0.85 AS confidence_level)
+  );
 END;
 
 -- 3. 5-Minute Real-Time Inference & Alerting Procedure
